@@ -1,0 +1,21 @@
+#! /bin/bash
+
+./header
+
+./MersadAgent $@ &
+usleep 300000
+
+./MersadAgent $@ &
+usleep 300000
+
+./MersadAgent $@ &
+usleep 300000
+
+./MersadAgent $@ &
+usleep 300000
+
+./MersadAgent $@ &
+sleep 1
+
+./MersadAgent --coach $@ &
+sleep 1

@@ -1,0 +1,15 @@
+#! /bin/bash
+
+./header
+
+./MersadAgent $@ --goalie &
+sleep 1
+
+for ((i = 2; i < 12; i++))
+do
+./MersadAgent --number $i $@ &
+sleep 0.3
+done
+
+./MersadAgent $@ --coach &
+sleep 1

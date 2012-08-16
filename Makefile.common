@@ -1,0 +1,70 @@
+#
+#  Copyright 2002-2010, Mersad Team, Allameh Helli High School (NODET).
+#
+#  This program is free software, you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+#  GNU Library General Public License for more details.
+#
+#  This file is created by: Mohsen Izadi
+#  	and is modified by: Ahmad Boorghany, Sassan Haradji, Pooria Kaviani
+#
+#  Released on Wednesday 25 August 2010, 3 Shahrivar 1389 by Mersad RoboCup Team.
+#  For more information please read README file.
+#
+
+SHELL = /bin/sh
+
+CC=gcc
+CXX=g++
+
+CXXFLAGS = -O2 -pipe -Wall -g -I. \
+						$(foreach DEPLIB,$(DEPLIBS),-I$(TOPDIR)/$(DEPLIB)) \
+						$(foreach LOGLEVEL,$(LOGLEVELS),-D$(LOGLEVEL))
+
+CXXSTATICFLAGS = -O2 -pipe -Wall -static -static-libgcc -I. \
+						$(foreach DEPLIB,$(DEPLIBS),-I$(TOPDIR)/$(DEPLIB)) \
+						$(foreach LOGLEVEL,$(LOGLEVELS),-D$(LOGLEVEL))
+
+LDFLAGS = 
+LIBS = 
+DEFS = 
+LIBDIR = $(TOPDIR)/.lib
+OBJDIR = .obj
+DEPDIR = .dep
+
+DEPLIBS = Agent WorldModel AdvancedActions BasicActions Utilities Geometry AdvancedPlans
+
+SRCS = $(filter-out Main.cpp,$(wildcard *.cpp))
+OBJS = $(foreach OBJ,$(SRCS:.cpp=.o),$(OBJDIR)/$(OBJ))
+DEPS = $(foreach DEP,$(SRCS:.cpp=.d),$(DEPDIR)/$(DEP))
+
+SEND_TO_MONITOR = 1
+
+$(OBJDIR)/%.o: %.cpp
+	$(CXX) -c $(CXXFLAGS) $(DEFS) -o $@ $<
+
+$(DEPDIR)/%.d: %.cpp
+	@$(SHELL) -ec '$(CXX) -MM $(CXXFLAGS) $< \
+	| sed '\''s/$*.o/$(OBJDIR)\/$*.o\ $(DEPDIR)\/$*.d/g'\'' > $@; \
+	[ -s $@ ] || rm -f $@'
+
+all:: $(LIBDIR)
+
+$(LIBDIR):
+	mkdir $@
+
+ifneq ($(DEPS),)
+ifneq ($(MAKECMDGOALS),tidy)
+ifneq ($(MAKECMDGOALS),clean)
+sinclude $(DEPS)
+endif
+endif
+endif
+
+clean::
+	rm -f *~ $(OBJDIR)/*.o *.log $(DEPDIR)/*.d

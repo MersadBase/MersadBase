@@ -1,0 +1,22 @@
+
+Installation
+------------
+
+ There is no need to configure.
+ Only type `make all'.
+
+Usage
+-----
+
+ Use scripts to start the team.
+ It is preferred to run it on two independent machines and
+ run the server on another machine.
+ For more options, run `./MersadAgent --help'.
+
+Operating System
+----------------
+
+ The program has been tested with gcc 4.4 or later on
+ a Ubuntu 10.04 machine and is expected to run
+ normally on RedHat, Fedora, Mandrake, Gentoo, and OpenSUSE.
+

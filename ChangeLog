@@ -1,0 +1,115 @@
+
+[1.1.2]
+Mon 13 Sep 2010 Mehrdad Bakhtiari <mehrdad@bakhtiari.org>
+	* WorldModelUtilities:
+		- getCatchProbability()
+
+Mon 13 Sep 2010 MohammadReza Montazeri Shatoori <monta2009@gmail.com>
+	* FormationEditor:
+		- FormationEditor-1.0.0 released
+
+[1.1.1]
+Sun 05 Sep 2010 Mehrdad Bakhtiari <mehrdad@bakhtiari.org>
+	* Command:
+		- TackleCommand
+
+[1.1.0]
+Mon 23 Aug 2010 Mehrdad Bakhtiari <mehrdad@bakhtiari.org>
+	* AdvancedCoach:
+		- substitute() specify new type for a player (substitute him)
+
+Mon 17 Aug 2010 Mehrdad Bakhtiari <mehrdad@bakhtiari.org>
+	* WorldModelBase:
+		- parseChangePlayer() set Player card to CM_NONE
+	* WorldModelHear:
+		- parseRefereeHear()
+	* Player:
+		- parseFullState()
+
+Thu 22 Jul 2010 Mehrdad Bakhtiari <mehrdad@bakhtiari.org>
+	* Player:
+		- parse() and parseFullState() updated
+		- isFoulCharged() return true if opponent's foul succeeds and player is idle
+		- setByAnotherPlayer() updated
+	* WorldModelUtilities:
+		- getTackleProb changed (brief foul probability and tackle probability)
+	* BasicDash:
+		- New ForbiddenAreaGotoPoint for circle area
+	* Goalie:
+		- CatchDecision()
+
+[1.0.0]
+Fri 09 Jul 2010 Mehrdad Bakhtiari <mehrdad@bakhtiari.org>
+	* WorldModelHear:
+		- getOurPenaltyKicker(), determine our kicker in penalty mode
+	* Penalty:
+
+	* Documentation:
+		- Goalie.pdf, Dash.pdf
+
+[0.9.9-2]
+Sun 04 Jul 2010 Mehrdad Bakhtiari <mehrdad@bakhtiari.org>
+	* Goalie:
+		- GoalieIntercept
+	* NonPlayOnDecision:
+		- KickOff, kicker selection
+	* Shoot:
+
+[0.9.9]
+Wed 30 Jun 2010 Mehrdad Bakhtiari <mehrdad@bakhtiari.org>
+	* Shoot.h.cpp:
+	* Tackle.h.cpp:
+		- Tackle Decision
+	* BodyDecision:
+		- Search ball
+		- request for substitution
+	* DefensePlan.h.cpp:
+		- Defenders decision
+	* Goalie.h.cpp:
+		- Base code of ESKILAS Goalie (in RoboCup2010)
+		- backPass!!
+	* NonPlayOnDecision:
+		- decide for foul and penalty playModes
+	* Penalty.h.cpp:
+	* AdvancedCoach:
+		- sendTeamGraphic
+	* BasicCoach:
+	* DecideCommonTypes:
+		- TurnNeckMode
+	* HeadDecision:
+	* PointToDecision:
+		- send stamina to teammates by PointToCommand
+	* BasicDash:
+		- GoalieGotoPoint()
+		- DangerAreaGotoPoint()
+		- PerfectGotoPoint() it may use instead other gotoPoints functions
+		- DashNormalGotoPoint()
+	* BasicTackle.h.cpp:
+	* Command:
+		- TackleCommand
+	* Degree:
+	* FullLine:
+	* HalfLine:
+	* Line:
+	* Rectangle:
+	* Vector:
+	* Basics:
+	* Defines:
+	* Formation:
+	* Types:
+		- Point, CardModel, PlayMode
+	* Ball:
+		- getTacklePowerRate()
+	* Body:
+		- Effort and battery added
+	* Player:
+		- TackleRemainCycle and card
+	* WorldModelBase:
+	* WorldModelHear:
+		- parseRefereeHear()
+	* WorldModelUtilities:
+		- getTackleProb(), getTackleEffectivePower(), ...
+
+Wed 30 Jun 2010 MohammadReza Montazeri Shatoori <monta2009@gmail.com>
+	* FastIC.h.cpp:
+

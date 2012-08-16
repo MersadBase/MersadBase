@@ -1,0 +1,17 @@
+#! /bin/bash
+
+echo ""
+echo -n " | Mersad ver "
+awk 'BEGIN  { "basename `pwd`" | getline $$Y;gsub("Mersad-","",$$Y);printf"%s",$$Y}'
+echo ""
+
+echo " | Allameh Helli High School (NODET)"
+echo " | Islamic Republic of IRAN"
+echo " |"
+echo " | Mersad Base Version 1.1.1 Created by:  Mehrdad Bakhtiari, MohammadReza Montazeri Shatoori, Sina Saharkhiz"
+echo " | Special Thanks to Mersad Founders and Core Members: Meisam Vosoughpour, Ahmad Boorghany, Mohammad Salehe, Mostafa Rokooei. "
+echo " | Many Thanks to Other Contributors: Pooria Kaviani, Mohammad Zareie, Darioush JalaliNasab, Sasaan Haradji. "
+echo " | Copyright 2003-2010. All rights reserved."
+echo " \`-- -- --"
+echo ""
+

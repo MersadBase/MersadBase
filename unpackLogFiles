@@ -1,0 +1,8 @@
+#! /bin/bash
+
+./MersadAgent --offline --number 1 --goalie
+for ((i = 2; i < 12; i++))
+do
+./MersadAgent --offline --number $i
+done
+./MersadSAgent --offline --coach

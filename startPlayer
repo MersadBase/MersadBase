@@ -1,0 +1,6 @@
+#! /bin/bash
+
+./header
+
+./MersadAgent $@ &
+sleep 1
