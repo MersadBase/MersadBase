@@ -23,4 +23,9 @@ using namespace std;
 int Share::lastSRPShootCycle(0); // SRP Cycle Run
 int Share::lastKickableCycle(0); // Last Kickable Cycle
 bool Share::lastCycleViewChanged(false);
+unsigned Share::lastPass(0);
+vector<ChainAction> Share::chain;
 
+ViewModeWidth Share::lastVMW(VMW_NORMAL);
+
+KickEntry Share::lastKick;

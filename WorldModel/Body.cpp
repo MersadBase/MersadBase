@@ -15,7 +15,7 @@
  *
  *  Released on Sunday 4 July 2010, 12 Tir 1389 by Mersad RoboCup Team.
  *  For more information please read README file.
-*/
+ */
 
 #include <assert.h>
 
@@ -37,10 +37,10 @@ Body::Body()
 	seeSynch = false;
 }
 
-void Body::parseSenseBody(const SExpression &exp,Side fieldSide)
+void Body::parseSenseBody(const SExpression &exp, Side fieldSide)
 {
 	SExpAtomic *at;
-	SExpression *se1,*se2;
+	SExpression *se1, *se2;
 
 	at = dynamic_cast<SExpAtomic *>(exp[0]);
 	assert(at);
@@ -368,7 +368,7 @@ void Body::parseSenseBody(const SExpression &exp,Side fieldSide)
 
 		if (at1->type() == ST_EXPRESSION)
 		{
-			for (int coll = 1;coll < se1->size();coll++)
+			for (int coll = 1; coll < se1->size(); coll++)
 			{
 				at1 = (*se1)[coll];
 				SExpression *tmp = dynamic_cast<SExpression *>(at1);
@@ -436,8 +436,8 @@ void Body::parseSenseBody(const SExpression &exp,Side fieldSide)
 	LOG << "h = " << isCollisionBall() << endl;
 }
 
-void Body::update(FieldFlag **flags, FieldGoal **goals, FieldLine **lines,
-		unsigned flagsNum, unsigned goalsNum, unsigned linesNum)
+void Body::update(FieldFlag **flags, FieldGoal **goals, FieldLine **lines, unsigned flagsNum,
+		unsigned goalsNum, unsigned linesNum)
 {
 	float angle;
 	unsigned i;
@@ -447,13 +447,13 @@ void Body::update(FieldFlag **flags, FieldGoal **goals, FieldLine **lines,
 	if (linesNum != 0)
 	{
 		for (i = 1; i < linesNum; i++)
-			if (lines[i]->getHeadVec().getMagnitude() >
-				lines[farestLine]->getHeadVec().getMagnitude())
+			if (lines[i]->getHeadVec().getMagnitude()
+					> lines[farestLine]->getHeadVec().getMagnitude())
 				farestLine = i;
 
 		angle = lines[farestLine]->getHeadVec().getDirection();
-		headDir = lines[farestLine]->getPrependOrient() -
-				((angle < 0) ? (90 + angle) : -(90 - angle));
+		headDir = lines[farestLine]->getPrependOrient()
+				- ((angle < 0) ? (90 + angle) : -(90 - angle));
 
 		headDir = normalizeAngle(headDir);
 		bodyDir = normalizeAngle(headDir - relativeHeadDir);
@@ -461,12 +461,13 @@ void Body::update(FieldFlag **flags, FieldGoal **goals, FieldLine **lines,
 
 	// Updating Position
 	if (flagsNum > 0)
-		position = possiblePoints.calculateBodyPosition(*this, (const FieldFlag**)(flags), flagsNum, posDeviation, quantizeStep);
+		position = possiblePoints.calculateBodyPosition(*this, (const FieldFlag**) (flags),
+				flagsNum, posDeviation, quantizeStep);
 	seePosDeviation = posDeviation;
 	setSimCounter(0);
 
 	// Updating Velocity
-	velocity.setAsPolar(speedAmount,headDir + speedDir);
+	velocity.setAsPolar(speedAmount, headDir + speedDir);
 }
 
 void Body::simulateByDynamics(bool realBody)
@@ -499,35 +500,51 @@ void Body::completeParseSenseBody()
 {
 	// updating velocity and checking for body collision.
 	Vector lastVelocity(velocity);
-	velocity.setAsPolar(speedAmount,headDir + speedDir);
+	velocity.setAsPolar(speedAmount, headDir + speedDir);
 
 	/*if (lastVelocity.getMagnitude() > 0.02 ||
-		velocity.getMagnitude() > 0.02)
-	{
-		Vector deltaVelocity(lastVelocity - velocity);
+	 velocity.getMagnitude() > 0.02)
+	 {
+	 Vector deltaVelocity(lastVelocity - velocity);
 
-//LOG << "COLL: deltaVelocity: " << deltaVelocity << endl;
-//LOG << "COLL: velocity.getMagnitude() / 5.0: "
-//	<< velocity.getMagnitude() / 5.0 << endl;
-//LOG << "COLL: deltaDir: " << getDeltaAngle(lastVelocity.getDirection(),
-//					velocity.getDirection()) << endl;
+	 //LOG << "COLL: deltaVelocity: " << deltaVelocity << endl;
+	 //LOG << "COLL: velocity.getMagnitude() / 5.0: "
+	 //	<< velocity.getMagnitude() / 5.0 << endl;
+	 //LOG << "COLL: deltaDir: " << getDeltaAngle(lastVelocity.getDirection(),
+	 //					velocity.getDirection()) << endl;
 
-		if (deltaVelocity.getMagnitude() >
-				fmax(velocity.getMagnitude() / 5.0, 0.05) ||
-			fabs(getDeltaAngle(lastVelocity.getDirection(),
-					velocity.getDirection())) > 45)
-		{
-			setCollisionStatus(TA_YES);
-			LOG << "*** Body Collision ***" << endl;
-		}
-		else
-			setCollisionStatus(TA_NO);
-	}
-	else
-		setCollisionStatus(TA_DONT_KNOW);*/
+	 if (deltaVelocity.getMagnitude() >
+	 fmax(velocity.getMagnitude() / 5.0, 0.05) ||
+	 fabs(getDeltaAngle(lastVelocity.getDirection(),
+	 velocity.getDirection())) > 45)
+	 {
+	 setCollisionStatus(TA_YES);
+	 LOG << "*** Body Collision ***" << endl;
+	 }
+	 else
+	 setCollisionStatus(TA_NO);
+	 }
+	 else
+	 setCollisionStatus(TA_DONT_KNOW);*/
 
 	// updating body pointing dir
 	pointingDir = Degree::normalizeAngle(headDir + armTargetDir);
+}
+
+float Body::getDashDirRate(float dir) const
+{
+	float dirRate = (
+			fabs(dir) > 90.0 ?
+					backDashRate
+							- ((backDashRate - sideDashRate) * (1.0 - (fabs(dir) - 90.0) / 90.0)) :
+					sideDashRate + ((1.0 - sideDashRate) * (1.0 - fabs(dir) / 90.0)));
+	dirRate = min(max(0.f, dirRate), 1.f);
+	return dirRate;
+}
+
+float Body::getTurnInertia() const
+{
+	return (1 + inertiaMoment * velocity.getMagnitude());
 }
 
 void Body::simulateByAction(const Command *bodyCycleCommand, bool realBody)
@@ -536,13 +553,11 @@ void Body::simulateByAction(const Command *bodyCycleCommand, bool realBody)
 	if (dynamic_cast<const DashCommand *>(bodyCycleCommand))
 	{
 		Vector dashAcclerate;
-		const DashCommand *dashCommand =
-				dynamic_cast<const DashCommand *>(bodyCycleCommand);
+		const DashCommand *dashCommand = dynamic_cast<const DashCommand *>(bodyCycleCommand);
 		float dir = dashCommand->getDirection();
-		float dirRate = (fabs(dir) > 90.0 ? backDashRate - ((backDashRate - sideDashRate) * (1.0 - (fabs(dir) - 90.0) / 90.0))
-                            : sideDashRate + ((1.0 - sideDashRate) * (1.0 - fabs(dir) / 90.0)));
-                dirRate = min(max(0.f, dirRate), 1.f);
-		dashAcclerate.setAsPolar(dashCommand->getPower() * dirRate * dashPowerRate * effort, bodyDir - dir);
+		float dirRate = getDashDirRate(dir);
+		dashAcclerate.setAsPolar(dashCommand->getPower() * dirRate * dashPowerRate * effort,
+				bodyDir - dir);
 		if (dashAcclerate.getMagnitude() > accelMax)
 			dashAcclerate.setAsPolar(accelMax, dashAcclerate.getDirection());
 
@@ -551,8 +566,8 @@ void Body::simulateByAction(const Command *bodyCycleCommand, bool realBody)
 			velocity.setAsPolar(speedMax, velocity.getDirection());
 
 		/*LOG << "YYY Player Type = " << getType() << " speedMax = " << speedMax << " velocity = " << velocity.getMagnitude()
-		<< " dashAccel = " << dashAcclerate.getMagnitude() << " Power = " << dashCommand->getPower() << " Rate = " << dashPowerRate
-		<< " effort = " << effort << endl;*/
+		 << " dashAccel = " << dashAcclerate.getMagnitude() << " Power = " << dashCommand->getPower() << " Rate = " << dashPowerRate
+		 << " effort = " << effort << endl;*/
 
 		if (!realBody)
 		{
@@ -570,19 +585,16 @@ void Body::simulateByAction(const Command *bodyCycleCommand, bool realBody)
 	else if (dynamic_cast<const TurnCommand *>(bodyCycleCommand))
 	{
 		float turnAngle;
-		const TurnCommand *turnCommand =
-				dynamic_cast<const TurnCommand *>(bodyCycleCommand);
+		const TurnCommand *turnCommand = dynamic_cast<const TurnCommand *>(bodyCycleCommand);
 
 		turnAngle = turnCommand->getDirection();
 
 		// CHECK: check maxMoment & minMoment
-		if (turnAngle > maxMoment ||
-			turnAngle < minMoment)
+		if (turnAngle > maxMoment || turnAngle < minMoment)
 			assert(0);
 
 		// Actual Turn Angle formula.
-		turnAngle = turnAngle /
-					(1 + inertiaMoment * velocity.getMagnitude());
+		turnAngle = turnAngle / getTurnInertia();
 		assert(turnAngle <= maxMoment);
 		assert(turnAngle >= minMoment);
 
@@ -593,8 +605,7 @@ void Body::simulateByAction(const Command *bodyCycleCommand, bool realBody)
 	// Move
 	else if (dynamic_cast<const MoveCommand *>(bodyCycleCommand))
 	{
-		const MoveCommand *moveCommand =
-				dynamic_cast<const MoveCommand *>(bodyCycleCommand);
+		const MoveCommand *moveCommand = dynamic_cast<const MoveCommand *>(bodyCycleCommand);
 
 		position.setAsCartesian(moveCommand->getX(), moveCommand->getY());
 	}
@@ -608,12 +619,12 @@ void Body::simulateByAction(const Command *bodyCycleCommand, bool realBody)
 	}
 
 	// PointTo
-/*	else if (typeid(*bodyCycleCommand) == typeid(PointToCommand))
-	{
-		const PointToCommand *pointToCommand =
-				dynamic_cast<const PointToCommand *>(bodyCycleCommand);
-		// TODO:
-	}*/
+	/*	else if (typeid(*bodyCycleCommand) == typeid(PointToCommand))
+	 {
+	 const PointToCommand *pointToCommand =
+	 dynamic_cast<const PointToCommand *>(bodyCycleCommand);
+	 // TODO:
+	 }*/
 }
 
 void Body::setServerParamVars(const Param &serverParam)
@@ -650,8 +661,37 @@ float Body::viewWidthToViewAngle(ViewModeWidth width) const
 		}
 	}
 
-
 	return 0;
+}
+
+ViewModeWidth Body::viewAngleToViewWidth(float angle) const
+{
+	if (seeSynch)
+	{
+		switch ((int) angle)
+		{
+		case 30:
+			return VMW_NARROW;
+		case 60:
+			return VMW_NORMAL;
+		case 90:
+			return VMW_WIDE;
+		}
+	}
+	else
+	{
+		if (angle == 22.5) //switch quantity not an integerreturn VMW_NARROW;
+			return VMW_NARROW;
+		switch ((int) angle)
+		{
+		case 45:
+			return VMW_NORMAL;
+		case 90:
+			return VMW_WIDE;
+		}
+	}
+
+	return VMW_NORMAL;
 }
 
 // Counting functions
@@ -746,6 +786,14 @@ bool Body::isTackleCountChanged() const
 	return true;
 }
 
+bool Body::isBallInKickable(const Ball &ball) const
+{
+	float kickableArea = ball.getSize() + getKickableMargin() + getSize() - 0.055;
+	if (ball.getPos().getDistance(getPos()) < kickableArea)
+		return true;
+	return false;
+}
+
 // Getting functions
 float Body::getViewAngle() const
 {
@@ -753,9 +801,9 @@ float Body::getViewAngle() const
 }
 
 /*TriAnswer Body::getCollisionStatus() const
-{
-	return collisionStatus;
-}*/
+ {
+ return collisionStatus;
+ }*/
 
 float Body::getEffort() const
 {
@@ -882,6 +930,15 @@ float Body::getVisibleDistance() const
 	return visibleDistance;
 }
 
+bool Body::canLookToDir(float dir, ViewModeWidth vmw) const
+{
+	float viewAngle = viewWidthToViewAngle(vmw) * 2;
+	float deltaAngle = fabs(Degree::getDeltaAngle(dir, getBodyDir()));
+	if (deltaAngle < 90 + viewAngle / 2)
+		return true;
+	return false;
+}
+
 // Setting functions
 void Body::setViewAngle(float viewAngleArg)
 {
@@ -889,10 +946,10 @@ void Body::setViewAngle(float viewAngleArg)
 }
 
 /*void Body::setCollisionStatus(TriAnswer collisionStatusArg)
-{
-	collisionStatus = collisionStatusArg;
-}
-*/
+ {
+ collisionStatus = collisionStatusArg;
+ }
+ */
 void Body::setVMWidth(ViewModeWidth vmWidthArg)
 {
 	vmWidth = vmWidthArg;
@@ -962,3 +1019,14 @@ float Body::getBattery() const
 	return battery;
 }
 
+float Body::getBallAccelMax(const Ball &ball) const
+{
+	Vector ballAbsVec = ball.getPos() - getPos();
+	Vector ballBodyVec = ballAbsVec;
+	ballBodyVec.rotate(-getBodyDir());
+	float kickRate = ball.getKickPowerRate()
+			* (1.0 - 0.25 * fabs(ballBodyVec.getDirection()) / 180.0
+					- 0.25 * (ballAbsVec.getMagnitude() - ball.getSize() - getSize())
+							/ getKickableMargin());
+	return min(getMaxPower() * kickRate, ball.getAccelMax());
+}

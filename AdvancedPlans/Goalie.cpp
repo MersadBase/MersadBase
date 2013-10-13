@@ -110,7 +110,7 @@ bool Goalie::GoalieIntercept(Form& form)
 	Intercept intercept(worldModel);
 	intercept.getValue();
 	LOG << "lll" << worldModel->getGlobalFastIC().isSelfFastestPlayer() << endl;
-	if (intercept.getInterceptPoint().x > -52.5 and 
+	if (intercept.getInterceptPoint().x > -52.5 and
 		(worldModel->getGlobalFastIC().isSelfFastestPlayer() or worldModel->getGlobalFastIC().getFastestPlayerReachCycle() > intercept.getInterceptTime()) and fabs(intercept.getInterceptPoint().getY()) < 35)
 	{
 		LOG << "return standard intercept" << endl;

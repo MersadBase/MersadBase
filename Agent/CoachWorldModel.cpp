@@ -160,8 +160,6 @@ void CoachWorldModel::parseHear(const SExpression &exp)
 	SExpression *se;
 	SExpAtomic *at;
 
-	resetHearedVarsBeforeHear();
-
 	at = dynamic_cast<SExpAtomic *>(exp[1]);
 	assert(at);
 	hearCycle = at->asInt();

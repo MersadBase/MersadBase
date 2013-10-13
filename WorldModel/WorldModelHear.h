@@ -21,37 +21,25 @@
 #define __HEAR_H
 
 #include <WorldModelUtilities.h>
+#include <SayCodec.h>
 
 class WorldModelHear: public WorldModelUtilities
 {
 protected:
+	//hear stuff
 	unsigned lastHearCycle;
-
-	float hearedSuggestPassDir;
-	float hearedSuggestPassSpeed;
-	float hearedSuggestPassWeight;
-	unsigned hearedSuggestPassNum;
-
-	unsigned freeKickAdvicerSayCycle;
-	unsigned freeKickAdvicerSayNumber;
-
-	// Remain until next hear
-	char hearedHeader;
+	unsigned lastSelfHearCycle;
 	unsigned hearedSender;
+	unsigned lastPassHearCycle;
 
-	// Remain until next cycl0e
-	int planStatusSender;
-	unsigned hearedPlanStatus;
-	unsigned hearedInterceptNum;
-	unsigned hearedSuggestPassTime;
+	//ST_PASS
+	unsigned heardPassSender;
+	unsigned heardPassCycle;
+	unsigned heardPassTime;
+	unsigned heardPassReceiver;
+	Ball heardPassBall;
 
-	std::string defenseMessage;
-	bool defenseHeared;
-	int defenseHearedTime;
-
-	std::string goalPlanMessage;
-	bool goalPlanHeard;
-
+	SayHearVars saidVars;
 	unsigned ourPenaltyKicker;
 
 public:
@@ -67,34 +55,10 @@ public:
 			const std::string &message);
 	void opponentHear(float hearDir, const std::string &message);
 
-	void routinTmmHear(const std::string &message, unsigned senderNum);
-	void routinTmmHearWithoutVel(const std::string &message, unsigned senderNum);
-	void beforePassTmmHear(const std::string &message, unsigned senderNum);
-	void freeKickKickerHear(const std::string &messager, unsigned senderNum);
-	void radarHear(const std::string &message, unsigned senderNum);
-	void setDefensePlanHear(const std::string &message, unsigned senderNum);
-	void goalPlanHear(const std::string &message, unsigned senderNum);
+	///////////////////////////////////////////////////////////////
+	void hearPass(unsigned long long int& code);
+	///////////////////////////////////////////////////////////////
 
-	void suggestPassTmmHear(const std::string &message, unsigned senderNum);
-//	void beforePassRelatedTmmHear(const std::string &message, unsigned senderNum);
-
-	void resetHearedVarsBeforeHear();
-
-	// Getting functions
-	unsigned getFreeKickAdvicerSayCycle() const;
-	unsigned getFreeKickAdvicerSayNumber() const;
-
-	char getHearedHeader() const;
-	bool getMustAttention() const;
-	float getHearedSuggestPassDir() const;
-	float getHearedSuggestPassSpeed() const;
-	float getHearedSuggestPassWeight() const;
-	unsigned getHearedSender() const;
-	unsigned getHearedPlanStatus() const;
-	unsigned getHearedInterceptNum() const;
-	unsigned getHearedSuggestPassNum() const;
-	unsigned getHearedSuggestPassTime() const;
-	int getPlanStatusSender() const;
 	unsigned getOurPenaltyKicker() const;
 
 };

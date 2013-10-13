@@ -32,7 +32,7 @@
 
 using namespace std;
 
-Offense::Offense(const WorldModel *worldModel): worldModel(worldModel)
+Offense::Offense(const WorldModel *wm): wm(wm)
 {
 }
 
@@ -42,17 +42,14 @@ Offense::~Offense()
 
 void Offense::decide(Form &form)
 {
-	Tackle tackle(worldModel);
-	if (worldModel->getGlobalFastIC().isSelfFastestTeammate())
+	Tackle tackle(wm);
+	if (wm->getGlobalFastIC().isSelfFastestTeammate())
 	{
-		if (worldModel->isBallKickable())
+		if (wm->isBallKickable())
 		{
-	command = new EmptyCommand();
-	return;
-
-			Shoot shoot(worldModel);
-			Dribble dribble(worldModel);
-			Pass pass(worldModel);
+			Shoot shoot(wm);
+			Dribble dribble(wm);
+			Pass pass(wm);
 			if (shoot.execute())
 			{
 				command = shoot.getCommand();
@@ -76,7 +73,7 @@ void Offense::decide(Form &form)
 			}
 			else
 			{
-				Intercept intercept = Intercept(worldModel);
+				Intercept intercept = Intercept(wm);
 				intercept.getValue();
 				intercept.execute(form);
 				command = intercept.getCommand();
@@ -91,8 +88,8 @@ void Offense::decide(Form &form)
 
 void Offense::positioning()
 {
-	Point targetPoint = worldModel->getFormation().getPosition(worldModel->getBody().getUniNum(), worldModel->getBall().getPos());
-	command = DashNormalGotoPoint(targetPoint, 0.75, worldModel->getBody()).getCommand();
+	Point targetPoint = wm->getPlayOnFormation().getPosition(wm->getBody().getUniNum()-1, wm->getBall().getPos());
+	command = DashNormalGotoPoint(targetPoint, 0.75, wm->getBody()).getCommand();
 }
 
 

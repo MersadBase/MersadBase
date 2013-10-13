@@ -15,7 +15,7 @@
  *
  *  Released on Sunday 4 July 2010, 12 Tir 1389 by Mersad RoboCup Team.
  *  For more information please read README file.
-*/
+ */
 
 #include <cmath>
 #include <cassert>
@@ -26,13 +26,17 @@
 #include <Command.h>
 #include <HeadDecision.h>
 #include <AdvancedAgent.h>
+#include <Share.h>
 
 using namespace std;
 using namespace Degree;
 using namespace Basics;
 
+#define LOGH LOG
+
 // HeadDecision functions
-HeadDecision::HeadDecision(AdvancedAgent *owner): notConstOwner(owner), owner(owner)
+HeadDecision::HeadDecision(AdvancedAgent *owner) :
+		notConstOwner(owner), owner(owner)
 {
 	for (unsigned i = 0; i < VIEW_PARTS_NUM; i++)
 		viewPartObjectsNums[i] = 0;
@@ -66,14 +70,14 @@ void HeadDecision::decide(const Command *bodyCycleCommand, const HeadDecisionFor
 	ViewModeWidth nextWidth = VMW_NORMAL;
 	TurnNeckMode tnMode = headForm.tnMode;
 
-	LOG << "HeadDecision::decide" << endl;
-	LOG << "\tTurnNeckMode: " << headForm.tnMode << endl;
+	LOGH << "HeadDecision::decide" << endl;
+	LOGH << "\tTurnNeckMode: " << headForm.tnMode << endl;
 
 	nextBody = worldModel->getBody();
-	LOG << "current cycle dir = " << nextBody.getBodyDir() << endl;
+	LOGH << "current cycle dir = " << nextBody.getBodyDir() << endl;
 	nextBody.simulateByAction(bodyCycleCommand);
 	nextBody.simulateByDynamics();
-	LOG << "next cycle dir = " << nextBody.getBodyDir() << endl;
+	LOGH << "next cycle dir = " << nextBody.getBodyDir() << endl;
 
 	nextBall = worldModel->getBall();
 	nextBall.simulateByAction(worldModel->getBody(), bodyCycleCommand);
@@ -88,12 +92,12 @@ void HeadDecision::decide(const Command *bodyCycleCommand, const HeadDecisionFor
 	}
 
 //	By Pooria
-/*	if (nextBall.getAbsVec().getMagnitude() < worldModel->getBody().getVisibleDistance())
-	{
-		if (tnMode == TNM_LOOK_CAREFULLY_TO_BALL or tnMode == TNM_LOOK_NORMALLY_TO_BALL)
-			tnMode = TNM_LOOK_CAREFULLY;
-	}
-*/
+	/*	if (nextBall.getAbsVec().getMagnitude() < worldModel->getBody().getVisibleDistance())
+	 {
+	 if (tnMode == TNM_LOOK_CAREFULLY_TO_BALL or tnMode == TNM_LOOK_NORMALLY_TO_BALL)
+	 tnMode = TNM_LOOK_CAREFULLY;
+	 }
+	 */
 	assert(tnMode != TNM_NONE);
 	TurnNeckMode lastMode = TNM_NONE;
 
@@ -103,137 +107,222 @@ void HeadDecision::decide(const Command *bodyCycleCommand, const HeadDecisionFor
 
 		switch (tnMode)
 		{
-			case TNM_LOOK_NORMALLY:
-				nextWidth = owner->getSyncedNormal();
-				nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
-				setWeightsForLookNormally();
-				break;
+		case TNM_LOOK_NORMALLY:
+			nextWidth = owner->getSyncedNormal();
+			nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
+			setWeightsForLookNormally();
+			break;
 
-			case TNM_LOOK_CAREFULLY:
-				nextWidth = owner->getSyncedNarrow();
-				nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
-				setWeightsForLookCarefully();
-				break;
+		case TNM_LOOK_CAREFULLY:
+			nextWidth = owner->getSyncedNarrow();
+			nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
+			setWeightsForLookCarefully();
+			break;
 
-			case TNM_LOOK_CAREFULLY_TO_BALL:
-				nextWidth = owner->getSyncedNarrow();
-				nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
-				decideForLookCarefullyToBall();
-				break;
+		case TNM_LOOK_CAREFULLY_TO_BALL:
+			nextWidth = owner->getSyncedNarrow();
+			nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
+			decideForLookCarefullyToBall(tnMode);
+			//decideForLookToDir(tnMode, worldModel->getBall().getAbsVec().getDirection());
+			break;
 
-			case TNM_LOOK_NORMALLY_TO_BALL:
-				nextWidth = owner->getSyncedNormal();
-				nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
-				decideForLookNormallyToBall(nextViewAngle, tnMode);
-				break;
+		case TNM_LOOK_NORMALLY_TO_BALL:
+			nextWidth = owner->getSyncedNormal();
+			nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
+			decideForLookNormallyToBall(tnMode);
+			//decideForLookToDir(
+			//	tnMode,
+			//(worldModel->getBall().getPos() - worldModel->getBody().getPos()).getDirection());
+			break;
 
-			case TNM_LOOK_CAREFULLY_TO_OPP_GOALIE:
-				nextWidth = owner->getSyncedNarrow();
-				nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
-				decideForLookCarefullyToOppGoalie(tnMode);
-				break;
+		case TNM_LOOK_CAREFULLY_TO_OPP_GOALIE:
+			nextWidth = owner->getSyncedNarrow();
+			nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
+			decideForLookCarefullyToOppGoalie(tnMode);
+			break;
 
-			case TNM_LOOK_NORMALLY_TO_OUR_GOALIE:
-				nextWidth = owner->getSyncedNormal();
-				nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
-				decideForLookNormallyToOurGoalie(tnMode);
-				break;
+		case TNM_LOOK_NORMALLY_TO_OUR_GOALIE:
+			nextWidth = owner->getSyncedNormal();
+			nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
+			decideForLookNormallyToOurGoalie(tnMode);
+			break;
 
-			case TNM_LOOK_CAREFULLY_TO_OPP_PLAYER:
-				nextWidth = owner->getSyncedNarrow();
-				nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
-				decideForLookCarefullyToOppPlayer(tnMode, headForm.attentionNum);
-				break;
+		case TNM_LOOK_CAREFULLY_TO_OPP_PLAYER:
+			nextWidth = owner->getSyncedNarrow();
+			nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
+			decideForLookCarefullyToOppPlayer(tnMode, headForm.attentionNum);
+			break;
 
-			case TNM_LOOK_CAREFULLY_TO_OPP_AND_BALL:
-				nextWidth = owner->getSyncedNarrow();
-				nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
-				decideForLookCarefullyToOppAndBall(tnMode, headForm.attentionNum);
-				break;
+		case TNM_LOOK_CAREFULLY_TO_OPP_AND_BALL:
+			nextWidth = owner->getSyncedNarrow();
+			nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
+			decideForLookCarefullyToOppAndBall(tnMode, headForm.attentionNum);
+			break;
 
-			case TNM_LOOK_OFFENSIVE_INTERCEPT:
-				nextWidth = owner->getSyncedNarrow();
-				nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
-				decideForOffensiveIntercept(tnMode);
-				break;
+		case TNM_LOOK_OFFENSIVE_INTERCEPT:
+			nextWidth = owner->getSyncedNarrow();
+			nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
+			decideForOffensiveIntercept(tnMode);
+			break;
 
-			case TNM_LOOK_OFFENSIVE:
-				nextWidth = owner->getSyncedNarrow();
-				nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
-				decideForOffensiveLook(tnMode);
-				//setWeightsForLookOffensive();
-				break;
+		case TNM_LOOK_OFFENSIVE:
+			nextWidth = owner->getSyncedNarrow();
+			nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
+			decideForOffensiveLook(tnMode);
+			//setWeightsForLookOffensive();
+			break;
 
-			case TNM_LOOK_TO_RECEIVER:
-				nextWidth = owner->getSyncedNarrow();
-				nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
-				decideForLookToReceiver(tnMode, headForm.attentionNum);
-				break;
+		case TNM_LOOK_TO_RECEIVER:
+			nextWidth = owner->getSyncedNarrow();
+			nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
+			decideForLookToReceiver(tnMode, headForm.attentionNum);
+			break;
 
-			case TNM_SEARCH:
-				nextWidth = owner->getSyncedNormal();
-				turnNeckCommand = new TurnNeckCommand(0.f);
-				break;
+		case TNM_SEARCH:
+			nextWidth = owner->getSyncedNormal();
+			turnNeckCommand = new TurnNeckCommand(0.f);
+			break;
 
-			case TNM_LOOK_TO_DIR:
-				nextWidth = owner->getSyncedNarrow();
-				nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
-				decideForLookToDir(tnMode, headForm.direction);
-				break;
-			case TNM_LOOK_TO_TMM_AND_BALL:
-				nextWidth = owner->getSyncedNarrow();
-				nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
-				decideForLookToTmmAndBall(tnMode, headForm.attentionNum);
-				break;
+		case TNM_LOOK_TO_DIR_NARROW:
+			nextWidth = owner->getSyncedNarrow();
+			nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
+			decideForLookToDir(headForm.direction);
+			break;
 
-			default:
-				assert(0);
+		case TNM_LOOK_TO_TMM_AND_BALL:
+			nextWidth = owner->getSyncedNarrow();
+			nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
+			decideForLookToTmmAndBall(tnMode, headForm.attentionNum);
+			break;
+
+		case TNM_LOOK_TO_DIR_NORMAL:
+			nextWidth = owner->getSyncedNormal();
+			nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
+			decideForLookToDir(headForm.direction);
+			break;
+
+		case TNM_LOOK_TO_DIR_WIDE:
+			nextWidth = owner->getSyncedWide();
+			nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
+			decideForLookToDir(headForm.direction);
+			break;
+
+		case TNM_LOOK_TO_BALL:
+			nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
+			decideForLookToBall(nextWidth);
+			break;
+
+		case TNM_LOOK_TO_POINT_NARROW:
+			nextWidth = owner->getSyncedNarrow();
+			nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
+			decideForLookToDir((headForm.lookPoint - nextBody.getPos()).getDirection());
+			break;
+
+		default:
+			assert(0);
 		}
 	}
 
+	//in bara ine ke age mitoonim ba vmw behtar bebinim ba hamoon bebinim
+	if ((worldModel->getSeeTime() == worldModel->getCurTime() - 2 and Share::lastVMW == VMW_WIDE)
+			or (worldModel->getSeeTime() == worldModel->getCurTime() - 1
+					and Share::lastVMW == VMW_NORMAL))
+		nextWidth = Share::lastVMW;
 	changeViewCommand = new ChangeViewCommand(VMQ_HIGH, nextWidth);
-	if (tnMode == TNM_LOOK_NORMALLY || tnMode == TNM_LOOK_CAREFULLY/* || tnMode == TNM_LOOK_OFFENSIVE*/)
+	Share::lastVMW = nextWidth;
+	if (tnMode == TNM_LOOK_NORMALLY
+			|| tnMode == TNM_LOOK_CAREFULLY/* || tnMode == TNM_LOOK_OFFENSIVE*/)
 		decideForTurnNeckCommand(nextViewAngle);
-
 	if (0)
 		logVariables();
 }
 
-void HeadDecision::decideForLookCarefullyToBall()
+void HeadDecision::decideForLookCarefullyToBall(TurnNeckMode &tnMode)
 {
-	LOG << "HeadDecision::decideForLookCarefullyToBall" << endl;
-	int p = -1;
+	LOGH << "HeadDecision::decideForLookCarefullyToBall" << endl;
+	bool p = 0;
 	if (worldModel->getCurCycle() % 2 == 0)
-	    p = 1;
-	float dir = normalizeAngle(nextBall.getHeadVec().getDirection() + 20 * p);
-	if (fabs(dir + worldModel->getBody().getRelativeHeadDir()) > 180.0)
-		dir = fabs(dir) / dir * 180 * -1;
+	{
+		p = 1;
+		LOG << "Should Change Direction" << endl;
+	}
+	float dir[2];
+	dir[0] = dir[1] = nextBall.getAbsVec().getDirection();
+	dir[0] += 20; //20 = 60/2 - 10.10 is for safety
+	dir[1] -= 20;
+	if (!nextBody.canLookToDir(dir[p], VMW_NARROW) and nextBody.canLookToDir(dir[!p], VMW_NARROW))
+	{
+		p = !p;
+		LOGH << "Majbooram Az Ye Taraf Negah Konam" << endl;
+	}
+	LOG << "next Direction " << dir[p] << endl;
+	decideForLookToDir(dir[p]);
+//	float dir = normalizeAngle(nextBall.getHeadVec().getDirection() + 20 * p);
+//	if (fabs(dir + worldModel->getBody().getRelativeHeadDir()) > 180.0)
+//		dir = fabs(dir) / dir * 180 * -1;
+//	else if (fabs(dir + worldModel->getBody().getRelativeHeadDir()) > 90.0)
+//		dir = fabs(dir) / dir * 180;
+//	LOGH << "\tdir : " << dir << endl;
+//	turnNeckCommand = new TurnNeckCommand(dir);
+}
+
+void HeadDecision::decideForLookToDir(float direction)
+{
+	LOGH << "HeadDecision::decideForLookToDir" << endl;
+	float dir;
+//	dir = direction - worldModel->getBody().getHeadDir();
+//	dir = normalizeAngle(dir);
+//	if (fabs(dir + worldModel->getBody().getRelativeHeadDir()) > 180.0)
+//		dir = fabs(dir) / dir * 180 * -1;
+//	else
+//		if (fabs(dir + worldModel->getBody().getRelativeHeadDir()) > 90.0)
+//			dir = fabs(dir) / dir * 180;
+//	dir = normalizeAngle(dir);
+//	LOGH << "\tdir : " << dir << endl;
+	if (fabs(Degree::getDeltaAngle(nextBody.getBodyDir(), direction)) <= 90)
+	{
+		dir = Degree::getDeltaAngle(direction, nextBody.getHeadDir());
+	}
 	else
-		if (fabs(dir + worldModel->getBody().getRelativeHeadDir()) > 90.0)
-			dir = fabs(dir) / dir * 180;
-	LOG << "\tdir : " << dir << endl;
+	{
+		LOGH << "Can't Look Directly To Direction" << endl;
+		if (fabs(Degree::getDeltaAngle(nextBody.getBodyDir() + 90, direction))
+				< fabs(Degree::getDeltaAngle(nextBody.getBodyDir() - 90, direction)))
+			direction = nextBody.getBodyDir() + 90;
+		else
+			direction = nextBody.getBodyDir() - 90;
+		dir = Degree::getDeltaAngle(direction, nextBody.getHeadDir());
+	}
+	if (dir == 180 and direction < nextBody.getHeadDir()) //Degree ino 180 mide eshtebahi chon fekr mikone mohem nist va 180 = -180
+		dir = -180;
 	turnNeckCommand = new TurnNeckCommand(dir);
 }
 
-void HeadDecision::decideForLookToDir(TurnNeckMode &tnMode, float direction)
+void HeadDecision::decideForLookToBall(ViewModeWidth &width)
 {
-	LOG << "HeadDecision::decideForLookToDir" << endl;
-	float dir;
-	dir = direction - worldModel->getBody().getHeadDir();
-	dir = normalizeAngle(dir);
-	if (fabs(dir + worldModel->getBody().getRelativeHeadDir()) > 180.0)
-		dir = fabs(dir) / dir * 180 * -1;
-	else
-		if (fabs(dir + worldModel->getBody().getRelativeHeadDir()) > 90.0)
-			dir = fabs(dir) / dir * 180;
-	dir = normalizeAngle(dir);
-	LOG << "\tdir : " << dir << endl;
-	turnNeckCommand = new TurnNeckCommand(dir);
+	LOG << "Decide For Look To Ball" << endl;
+	int angle = 0;
+	float deltaDir = fabs(
+			Degree::getDeltaAngle(nextBody.getBodyDir(), nextBall.getAbsVec().getDirection()));
+	LOG << "Delta Dir : " << deltaDir << endl;
+	int margin = 10;
+	decideForLookToDir(nextBall.getAbsVec().getDirection());
+	while (true)
+	{
+		angle += 60;
+		if (deltaDir < (angle / 2) - margin + 90) //90 is maximum deltaDir between body and head
+		{
+			angle = min(angle, 180); //chon momkene margin berine
+			LOG << "Found The Best Width : " << angle << endl;
+			width = nextBody.viewAngleToViewWidth(angle / 2);
+			return;
+		}
+	}
 }
 
 void HeadDecision::decideForLookCarefullyToOppGoalie(TurnNeckMode &tnMode)
 {
-	LOG << "\tHeadDecision::decideForLookCarefullyToOppGoalie" << endl;
+	LOGH << "\tHeadDecision::decideForLookCarefullyToOppGoalie" << endl;
 
 	float dir;
 	Player nextOppGoalie;
@@ -253,14 +342,14 @@ void HeadDecision::decideForLookCarefullyToOppGoalie(TurnNeckMode &tnMode)
 	}
 
 	dir = normalizeAngle(dir);
-	LOG << "\tdir : " << dir << endl;
+	LOGH << "\tdir : " << dir << endl;
 	turnNeckCommand = new TurnNeckCommand(dir);
 }
 
 // added by Mehrdad
 void HeadDecision::decideForLookNormallyToOurGoalie(TurnNeckMode &tnMode)
 {
-	LOG << "\tHeadDecision::decideForLookNormallyToOurGoalie" << endl;
+	LOGH << "\tHeadDecision::decideForLookNormallyToOurGoalie" << endl;
 
 	float dir;
 	Player nextTmmGoalie;
@@ -274,12 +363,13 @@ void HeadDecision::decideForLookNormallyToOurGoalie(TurnNeckMode &tnMode)
 	else
 	{
 		Vector goal(-52.5, 0.f);
-		dir = (goal - worldModel->getBody().getPos()).getDirection() - worldModel->getBody().getHeadDir();
-		LOG << "\tgoalie is not valid, dir : " << dir << endl;
+		dir = (goal - worldModel->getBody().getPos()).getDirection()
+				- worldModel->getBody().getHeadDir();
+		LOGH << "\tgoalie is not valid, dir : " << dir << endl;
 	}
 
 	dir = normalizeAngle(dir);
-	LOG << "\tdir : " << dir << endl;
+	LOGH << "\tdir : " << dir << endl;
 	if (fabs(dir) > 125.f) // dar haghighat bishtare va dar oon soorat nemitoone dorost bebine
 		tnMode = TNM_LOOK_CAREFULLY;
 	else
@@ -288,80 +378,75 @@ void HeadDecision::decideForLookNormallyToOurGoalie(TurnNeckMode &tnMode)
 
 void HeadDecision::decideForLookCarefullyToOppPlayer(TurnNeckMode &tnMode, unsigned attentionNum)
 {
-	LOG << "\tHeadDecision::decideForLookCarefullyToOppPlayer" << endl;
+	LOGH << "\tHeadDecision::decideForLookCarefullyToOppPlayer" << endl;
 
 	float dir;
 	Player nextOppPlayer;
 
 	if (worldModel->getFullPlayer(TID_OPPONENT, attentionNum - 1).isValid())
 	{
-		LOG << "\tfullPlayer(attentionNum) is valid" << endl;
+		LOGH << "\tfullPlayer(attentionNum) is valid" << endl;
 		nextOppPlayer = worldModel->getFullPlayer(TID_OPPONENT, attentionNum - 1);
-		LOG << "\tfullPlayer(attentionNum).getPos : " <<  worldModel->getFullPlayer(TID_OPPONENT, attentionNum - 1).getPos() << endl;
+		LOGH << "\tfullPlayer(attentionNum).getPos : "
+				<< worldModel->getFullPlayer(TID_OPPONENT, attentionNum - 1).getPos() << endl;
 		nextOppPlayer.simulateByDynamics(nextBody);
 		dir = nextOppPlayer.getHeadVec().getDirection();
 	}
 	else
 	{
-		LOG << "\tfullPlayer(attentionNum) is not valid" << endl;
+		LOGH << "\tfullPlayer(attentionNum) is not valid" << endl;
 		tnMode = TNM_LOOK_CAREFULLY;
 		return;
 	}
 
 	dir = normalizeAngle(dir);
-	LOG << "\tdir : " << dir << endl;
+	LOGH << "\tdir : " << dir << endl;
 	turnNeckCommand = new TurnNeckCommand(dir);
 }
 
 // added by Mehrdad
 void HeadDecision::decideForLookCarefullyToOppAndBall(TurnNeckMode &tnMode, unsigned attentionNum)
 {
-	LOG << "\t HeadDecision::decideForLookCarefullyToOppAndBall" << endl;
-
-	float dir;
+	LOGH << "\t HeadDecision::decideForLookCarefullyToOppAndBall" << endl;
 	Player nextOppPlayer;
 
-	if (attentionNum == 0 or attentionNum > 11 or !worldModel->getFullPlayer(TID_OPPONENT, attentionNum - 1).isValid())
+	ViewModeWidth vmw = VMW_NARROW;
+	if (attentionNum == 0 or attentionNum > 11
+			or !worldModel->getFullPlayer(TID_OPPONENT, attentionNum - 1).isValid())
 	{
-		LOG << "yaroo valid nis, TNM_LOOK_CAREFULLY" << endl;
-		tnMode = TNM_LOOK_CAREFULLY;
+		LOGH << "yaroo valid nis, LOOK TO ball NARROW" << endl;
+		decideForLookToDir((nextBall.getPos() - nextBody.getPos()).getDirection());
+//		decideForLookToBall(vmw);
 		return;
 	}
 	else
 	{
 		if (worldModel->getTimer().getCycle() % 2 == 0)
 		{
-			LOG << "Look to player" << endl;
+			LOGH << "Look to player" << endl;
 			nextOppPlayer = worldModel->getFullPlayer(TID_OPPONENT, attentionNum - 1);
 			nextOppPlayer.simulateByDynamics(nextBody);
-			dir = nextOppPlayer.getHeadVec().getDirection();
+			decideForLookToDir((nextOppPlayer.getPos() - nextBody.getPos()).getDirection());
 		}
 		else
 		{
-			LOG << "Look to ball" << endl;
-			dir = normalizeAngle(nextBall.getHeadVec().getDirection());
-			if (fabs(dir + worldModel->getBody().getRelativeHeadDir()) > 180.0)
-				dir = fabs(dir) / dir * 180 * -1;
-			else
-				if (fabs(dir + worldModel->getBody().getRelativeHeadDir()) > 90.0)
-					dir = fabs(dir) / dir * 180;
+			LOGH << "Look to ball" << endl;
+			decideForLookToDir((nextBall.getPos() - nextBody.getPos()).getDirection());
+//			decideForLookToBall(vmw);
 		}
 	}
-	dir = normalizeAngle(dir);
-	LOG << "\tdir : " << dir << endl;
-	turnNeckCommand = new TurnNeckCommand(dir);
 }
 
 void HeadDecision::decideForLookToTmmAndBall(TurnNeckMode &tnMode, unsigned attentionNum)
 {
-	LOG << "\t HeadDecision::decideForLookToTmmAndBall" << endl;
+	LOGH << "\t HeadDecision::decideForLookToTmmAndBall" << endl;
 
 	float dir;
 	Player nextOppPlayer;
 
 	if (!worldModel->getFullPlayer(TID_TEAMMATE, attentionNum - 1).isValid())
 	{
-		LOG << "yaroo valid nis, TNM_LOOK_CAREFULLY" << endl;
+		LOGH << "yaroo valid nis, TNM_LOOK_CAREFULLY" << endl;
 		tnMode = TNM_LOOK_CAREFULLY;
 		return;
 	}
@@ -369,139 +454,157 @@ void HeadDecision::decideForLookToTmmAndBall(TurnNeckMode &tnMode, unsigned atte
 	{
 		if (worldModel->getTimer().getCycle() % 2 == 0)
 		{
-			LOG << "Look to player" << endl;
+			LOGH << "Look to player" << endl;
 			nextOppPlayer = worldModel->getFullPlayer(TID_TEAMMATE, attentionNum - 1);
 			nextOppPlayer.simulateByDynamics(nextBody);
 			dir = nextOppPlayer.getHeadVec().getDirection();
 		}
 		else
 		{
-			LOG << "Look to ball" << endl;
+			LOGH << "Look to ball" << endl;
 			dir = normalizeAngle(nextBall.getHeadVec().getDirection());
 		}
 	}
 	dir = normalizeAngle(dir);
-	LOG << "\tdir : " << dir << endl;
+	LOGH << "\tdir : " << dir << endl;
 	turnNeckCommand = new TurnNeckCommand(dir);
 }
 
-void HeadDecision::decideForLookNormallyToBall(float nextViewAngle, TurnNeckMode &tnMode)
+void HeadDecision::decideForLookNormallyToBall(TurnNeckMode &tnMode)
 {
-	LOG << "\tHeadDecision::decideForLookNormallyToBall" << endl;
-
-	float dir;
-
-	if (worldModel->getBall().isValid())
+	LOGH << "\tHeadDecision::decideForLookNormallyToBall" << endl;
+	bool p = 0;
+	if ((worldModel->getCurCycle() / 2) % 2 == 0)
 	{
-		float headDirRight = nextBall.getAbsVec().getDirection() + (nextViewAngle - 15);
-		float headDirLeft = nextBall.getAbsVec().getDirection() - (nextViewAngle - 15);
-
-		if (abs(Degree::getDeltaAngle(nextBody.getBodyDir(), headDirLeft)) < 90 or abs(Degree::getDeltaAngle(nextBody.getBodyDir(), headDirRight)) < 90)
-		{
-			if (worldModel->getSeeDeltaCycle(headDirRight/*, 0.2*/) > worldModel->getSeeDeltaCycle(headDirLeft/*, 0.2*/))
-				dir = headDirRight;
-			else
-				dir = headDirLeft;
-		}
-		else
-		{
-			tnMode = TNM_LOOK_NORMALLY;
-			return;
-		}
-
-		dir = Degree::getDeltaAngle(dir, nextBody.getBodyDir());
-		dir = Degree::getDeltaAngle(dir, nextBody.getRelativeHeadDir());
+		p = 1;
+		LOGH << "Should Change Direction" << endl;
 	}
-	else
-		dir = -nextBody.getRelativeHeadDir();
-
-	dir = normalizeAngle(dir);
-	LOG << "\tdir : " << dir << endl;
-	turnNeckCommand = new TurnNeckCommand(dir);
+	float dir[2];
+	dir[0] = dir[1] = nextBall.getAbsVec().getDirection();
+	dir[0] += 50;
+	dir[1] -= 50;
+	if (!nextBody.canLookToDir(dir[p], VMW_NORMAL) and nextBody.canLookToDir(dir[!p], VMW_NORMAL))
+	{
+		p = !p;
+		LOGH << "Majbooram Az Ye Taraf Negah Konam" << endl;
+	}
+	LOG << "next Direction " << dir[p] << endl;
+	decideForLookToDir(dir[p]); //50 = 120/2 - 10. 10 is for safety
+//
+//	float dir;
+//	if (worldModel->getBall().isValid())
+//	{
+//		float headDirRight = nextBall.getAbsVec().getDirection() + (nextViewAngle - 15);
+//		float headDirLeft = nextBall.getAbsVec().getDirection() - (nextViewAngle - 15);
+//
+//		if (abs(Degree::getDeltaAngle(nextBody.getBodyDir(), headDirLeft)) < 90
+//				or abs(Degree::getDeltaAngle(nextBody.getBodyDir(), headDirRight)) < 90)
+//		{
+//			if (worldModel->getSeeDeltaCycle(headDirRight/*, 0.2*/)
+//					> worldModel->getSeeDeltaCycle(headDirLeft/*, 0.2*/))
+//				dir = headDirRight;
+//			else
+//				dir = headDirLeft;
+//		}
+//		else
+//		{
+//			tnMode = TNM_LOOK_NORMALLY;
+//			return;
+//		}
+//
+//		dir = Degree::getDeltaAngle(dir, nextBody.getBodyDir());
+//		dir = Degree::getDeltaAngle(dir, nextBody.getRelativeHeadDir());
+//	}
+//	else
+//		dir = -nextBody.getRelativeHeadDir();
+//
+//	dir = normalizeAngle(dir);
+//	LOGH << "\tdir : " << dir << endl;
+//	turnNeckCommand = new TurnNeckCommand(dir);
 }
 
 void HeadDecision::decideForTurnNeckCommand(float nextViewAngle)
 {
 	float bodyHeadDir;
 	float turnNeckAngle;
-	map <float, float> turnNeckWeights;
+	map<float, float> turnNeckWeights;
 	//float turnNeckWeights[4];
 	unsigned i, j;
 
 	updateViewPartObjectsNum();
 	for (i = 0; i < VIEW_PARTS_NUM; i++)
 		viewPartWeights[i] = getViewPartWeight(i);
-//	LOG << "bodyDir = " << nextBody.getBodyDir() << endl;
-	for (float dir = -82.5f;dir <= 82.5f;dir += 55.f)
+//	LOGH << "bodyDir = " << nextBody.getBodyDir() << endl;
+	for (float dir = -82.5f; dir <= 82.5f; dir += 55.f)
 	{
 		turnNeckWeights[dir] = 0;
 		bodyHeadDir = nextBody.getBodyDir()/* - 90 */+ dir;
-//		LOG << "JIIGH: " << dir << endl;
-//		LOG << "BOOGH: " << bodyHeadDir << endl;
+//		LOGH << "JIIGH: " << dir << endl;
+//		LOGH << "BOOGH: " << bodyHeadDir << endl;
 
 		for (j = 0; j < VIEW_PARTS_NUM; j++)
 		{
-			if (fabs(getDeltaAngle(worldModel->getViewPartDir(j), bodyHeadDir)) < nextViewAngle - VIEW_PART_SIZE / 2.f)
+			if (fabs(getDeltaAngle(worldModel->getViewPartDir(j), bodyHeadDir))
+					< nextViewAngle - VIEW_PART_SIZE / 2.f)
 			{
-				//LOG << "Delta Angle = " << normalizeAngle(worldModel->getViewPartDir(j)) << endl;
+				//LOGH << "Delta Angle = " << normalizeAngle(worldModel->getViewPartDir(j)) << endl;
 				turnNeckWeights[dir] += viewPartWeights[j]/* * viewPartWeights[j]*/;
-				//LOG << "Weight = " << viewPartWeights[j]/* * viewPartWeights[j]*/<< endl;
+				//LOGH << "Weight = " << viewPartWeights[j]/* * viewPartWeights[j]*/<< endl;
 			}
 		}
 	}
 	/*for (i = 0; i <= 180.0 / TURN_NECK_RESOLUTION; i++)
-	{
-		turnNeckWeights[i] = 0;
-		bodyHeadDir = nextBody.getBodyDir() - 90 + i * TURN_NECK_RESOLUTION;
+	 {
+	 turnNeckWeights[i] = 0;
+	 bodyHeadDir = nextBody.getBodyDir() - 90 + i * TURN_NECK_RESOLUTION;
 
-		LOG << "BOOGH: " << bodyHeadDir << endl;
+	 LOGH << "BOOGH: " << bodyHeadDir << endl;
 
-		for (j = 0; j < VIEW_PARTS_NUM; j++)
-		{
-			if (fabs(getDeltaAngle(worldModel->getViewPartDir(j), bodyHeadDir)) < nextViewAngle - VIEW_PART_SIZE / 2.f)
-			{
-				LOG << "Delta Angle = " << normalizeAngle(worldModel->getViewPartDir(j)) << endl;
-				turnNeckWeights[i] += viewPartWeights[j] * viewPartWeights[j];
-				LOG << "Weight = " << viewPartWeights[j] * viewPartWeights[j] << endl;
-			}
-		}
-	}
-*/
-	LOG << "Turn Neck Weight [" << -82.5 << "] = " << turnNeckWeights[-82.5] << endl;
+	 for (j = 0; j < VIEW_PARTS_NUM; j++)
+	 {
+	 if (fabs(getDeltaAngle(worldModel->getViewPartDir(j), bodyHeadDir)) < nextViewAngle - VIEW_PART_SIZE / 2.f)
+	 {
+	 LOGH << "Delta Angle = " << normalizeAngle(worldModel->getViewPartDir(j)) << endl;
+	 turnNeckWeights[i] += viewPartWeights[j] * viewPartWeights[j];
+	 LOGH << "Weight = " << viewPartWeights[j] * viewPartWeights[j] << endl;
+	 }
+	 }
+	 }
+	 */LOGH << "Turn Neck Weight [" << -82.5 << "] = " << turnNeckWeights[-82.5] << endl;
 	float turnNeckWeightFlag = -82.5;
-	for (float dir = -27.5f;dir <= 82.5f;dir += 55.f)
+	for (float dir = -27.5f; dir <= 82.5f; dir += 55.f)
 	{
-		LOG << "Turn Neck Weight [" << dir << "] = " << turnNeckWeights[dir] << endl;
+		LOGH << "Turn Neck Weight [" << dir << "] = " << turnNeckWeights[dir] << endl;
 		if (turnNeckWeights[dir] > turnNeckWeights[turnNeckWeightFlag])
 			turnNeckWeightFlag = dir;
 	}
 
 	turnNeckAngle = turnNeckWeightFlag;
 
-	LOG << "Turn Neck Angle = " << turnNeckAngle << endl;
+	LOGH << "Turn Neck Angle = " << turnNeckAngle << endl;
 	turnNeckCommand = new TurnNeckCommand(turnNeckAngle - nextBody.getRelativeHeadDir());/*Relative*/
 }
 
 void HeadDecision::decideForOffensiveIntercept(TurnNeckMode &tnMode)
 {
-	LOG << "HeadDecision::decideForOffensiveIntercept" << endl;
+	LOGH << "HeadDecision::decideForOffensiveIntercept" << endl;
 
 	float dir = normalizeAngle(nextBall.getHeadVec().getDirection());
-	LOG << "\tBall Dir : " << dir << endl;
+	LOGH << "\tBall Dir : " << dir << endl;
 	dir = (worldModel->getCurCycle() % 2 == 1) ? dir + 25 : dir - 25;
-	LOG << "\tDir : " << dir << endl;
+	LOGH << "\tDir : " << dir << endl;
 	turnNeckCommand = new TurnNeckCommand(dir);
 }
 
 void HeadDecision::decideForLookToReceiver(TurnNeckMode &tnMode, unsigned attentionNum)
 {
-	LOG << "\t HeadDecision::decideForLookToReceiver" << endl;
+	LOGH << "\t HeadDecision::decideForLookToReceiver" << endl;
 
 	float dir;
 
 	if (!worldModel->getFullPlayer(TID_TEAMMATE, attentionNum - 1).isValid())
 	{
-		LOG << "yaroo valid nis, TNM_LOOK_CAREFULLY" << endl;
+		LOGH << "yaroo valid nis, TNM_LOOK_CAREFULLY" << endl;
 		tnMode = TNM_LOOK_CAREFULLY;
 		return;
 	}
@@ -509,71 +612,72 @@ void HeadDecision::decideForLookToReceiver(TurnNeckMode &tnMode, unsigned attent
 	{
 		int p = -1;
 		if (worldModel->getCurCycle() % 2 == 0)
-		    p = 1;
+			p = 1;
 		worldModel->getFullPlayer(TID_TEAMMATE, attentionNum - 1);
-		dir = worldModel->getFullPlayer(TID_TEAMMATE, attentionNum - 1).getHeadVec().getDirection() + 20 * p;
+		dir = worldModel->getFullPlayer(TID_TEAMMATE, attentionNum - 1).getHeadVec().getDirection()
+				+ 20 * p;
 	}
 	dir = normalizeAngle(dir);
-	LOG << "\tdir : " << dir << endl;
+	LOGH << "\tdir : " << dir << endl;
 	turnNeckCommand = new TurnNeckCommand(dir);
 }
 
 void HeadDecision::decideForOffensiveLook(TurnNeckMode &tnMode)
 {
-	LOG << "\tHeadDecision::decideForOffensiveLook" << endl;
+	LOGH << "\tHeadDecision::decideForOffensiveLook" << endl;
 
-	float dir;
+//	float dir;
 
 	string players = "AB9";
 	/*if (worldModel->getGlobalFastIC().isSelfFastestPlayer())
+	 {
+	 LOGH << "\tSelf Fastest!" << endl;
+	 for (unsigned i = 0;i < players.size();i++)
+	 {
+	 if (uniNumToChar(worldModel->getBody().getUniNum()) == players[i])
+	 {
+	 LOGH << "\tIt's MYSELF!" << endl;
+	 continue;
+	 }
+	 if (worldModel->getFullPlayer(TID_TEAMMATE, charToUniNum(players[i]) - 1).getSimCounter() > 2)
+	 {
+	 Vector meToPlayer;
+	 meToPlayer.setByPoints(worldModel->getBody().getPos(), worldModel->getFullPlayer(TID_TEAMMATE, charToUniNum(players[i]) - 1).getPos());
+	 dir = meToPlayer.getDirection() - worldModel->getBody().getHeadDir();
+	 LOGH << "Player " << charToUniNum(players[i]) << " has SimCounter ("
+	 << worldModel->getFullPlayer(TID_TEAMMATE, charToUniNum(players[i]) - 1).getSimCounter() << ")" << endl;
+	 if (fabs(getDeltaAngle(nextBody.getBodyDir(), nextBody.getHeadDir() + dir)) > 90.f)
+	 {
+	 continue;
+	 }
+	 LOGH << "\tdir : " << dir << endl;
+	 turnNeckCommand = new TurnNeckCommand(dir);
+	 return;
+	 }
+	 }
+	 }
+	 else if (worldModel->getGlobalFastIC().isOurTeamBallPossessor() and worldModel->getGlobalFastIC().getFastestTeammate())
+	 {
+	 LOGH << "Other Fastest!" << endl;
+	 if (isInPlayers(worldModel->getGlobalFastIC().getFastestTeammate()->getUniNum(), players)
+	 and worldModel->getGlobalFastIC().getFastestTeammate()->getSimCounter() > 1)
+	 {
+	 Vector meToPlayer;
+	 meToPlayer.setByPoints(worldModel->getBody().getPos(), worldModel->getGlobalFastIC().getFastestTeammate()->getPos());
+	 dir = meToPlayer.getDirection() - worldModel->getBody().getHeadDir();
+	 LOGH << "\tdir : " << dir << endl;
+	 turnNeckCommand = new TurnNeckCommand(dir);
+	 return;
+	 }
+	 }
+	 else*/
 	{
-	    LOG << "\tSelf Fastest!" << endl;
-	    for (unsigned i = 0;i < players.size();i++)
-	    {
-		if (uniNumToChar(worldModel->getBody().getUniNum()) == players[i])
-		{
-		    LOG << "\tIt's MYSELF!" << endl;
-		    continue;
-		}
-		if (worldModel->getFullPlayer(TID_TEAMMATE, charToUniNum(players[i]) - 1).getSimCounter() > 2)
-		{
-		    Vector meToPlayer;
-		    meToPlayer.setByPoints(worldModel->getBody().getPos(), worldModel->getFullPlayer(TID_TEAMMATE, charToUniNum(players[i]) - 1).getPos());
-		    dir = meToPlayer.getDirection() - worldModel->getBody().getHeadDir();
-		    LOG << "Player " << charToUniNum(players[i]) << " has SimCounter ("
-			<< worldModel->getFullPlayer(TID_TEAMMATE, charToUniNum(players[i]) - 1).getSimCounter() << ")" << endl;
-		    if (fabs(getDeltaAngle(nextBody.getBodyDir(), nextBody.getHeadDir() + dir)) > 90.f)
-		    {
-			continue;
-		    }
-		    LOG << "\tdir : " << dir << endl;
-		    turnNeckCommand = new TurnNeckCommand(dir);
-		    return;
-		}
-	    }
-	}
-	else if (worldModel->getGlobalFastIC().isOurTeamBallPossessor() and worldModel->getGlobalFastIC().getFastestTeammate())
-	{
-	    LOG << "Other Fastest!" << endl;
-	    if (isInPlayers(worldModel->getGlobalFastIC().getFastestTeammate()->getUniNum(), players)
-		and worldModel->getGlobalFastIC().getFastestTeammate()->getSimCounter() > 1)
-	    {
-		Vector meToPlayer;
-		meToPlayer.setByPoints(worldModel->getBody().getPos(), worldModel->getGlobalFastIC().getFastestTeammate()->getPos());
-		dir = meToPlayer.getDirection() - worldModel->getBody().getHeadDir();
-		LOG << "\tdir : " << dir << endl;
-		turnNeckCommand = new TurnNeckCommand(dir);
+		LOGH << "Look Carefully!" << endl;
+		setWeightsForLookCarefully();
+		tnMode = TNM_LOOK_CAREFULLY;
 		return;
-	    }
 	}
-	else*/
-	{
-	    LOG << "Look Carefully!" << endl;
-	    setWeightsForLookCarefully();
-	    tnMode = TNM_LOOK_CAREFULLY;
-	    return;
-	}
-	LOG << "Look Offensive!!!" << endl;
+	LOGH << "Look Offensive!!!" << endl;
 	ViewModeWidth nextWidth = owner->getSyncedNarrow();
 	float nextViewAngle = worldModel->getBody().viewWidthToViewAngle(nextWidth);
 	setWeightsForLookOffensive();
@@ -582,14 +686,12 @@ void HeadDecision::decideForOffensiveLook(TurnNeckMode &tnMode)
 
 void HeadDecision::logVariables()
 {
-	LOG << "\tHeadDecision View Parts:" << endl;
+	LOGH << "\tHeadDecision View Parts:" << endl;
 
 	for (unsigned i = 0; i < VIEW_PARTS_NUM; i++)
-		LOG << "\tVP[" << i << "] >"
-			<< " Ang:" << worldModel->getViewPartDir(i)
-			<< " Cyc:" << worldModel->getViewPartCycle(i)
-			<< " ObN:" << viewPartObjectsNums[i]
-			<< " Wei:" << viewPartWeights[i] << endl;
+		LOGH << "\tVP[" << i << "] >" << " Ang:" << worldModel->getViewPartDir(i) << " Cyc:"
+				<< worldModel->getViewPartCycle(i) << " ObN:" << viewPartObjectsNums[i] << " Wei:"
+				<< viewPartWeights[i] << endl;
 }
 
 void HeadDecision::setWeightsForLookNormally()
@@ -628,24 +730,28 @@ void HeadDecision::updateViewPartObjectsNum()
 		// Counting full players.
 		for (j = 0; j < FULL_PLAYERS_NUM; j++)
 		{
-			if (worldModel->getFullPlayer(TID_TEAMMATE,j).isAlive() &&
-				!worldModel->getFullPlayer(TID_TEAMMATE,j).isBody())
+			if (worldModel->getFullPlayer(TID_TEAMMATE, j).isAlive()
+					&& !worldModel->getFullPlayer(TID_TEAMMATE, j).isBody())
 			{
-				deltaAngle = abs(getDeltaAngle(
-					worldModel->getFullPlayer(TID_TEAMMATE,j).getAbsVec().getDirection(),
-					worldModel->getViewPartDir(i)));
+				deltaAngle =
+						abs(
+								getDeltaAngle(
+										worldModel->getFullPlayer(TID_TEAMMATE, j).getAbsVec().getDirection(),
+										worldModel->getViewPartDir(i)));
 
 				if (deltaAngle <= VIEW_PART_SIZE / 2)
 					viewPartObjectsNums[i]++;
 				//if (j + 1 == 9)
-					//LOG << "FULL unum = " << j + 1 << "angle = " << normalizeAngle(worldModel->getViewPartDir(i)) << " dAngle = " << deltaAngle << endl;
+				//LOGH << "FULL unum = " << j + 1 << "angle = " << normalizeAngle(worldModel->getViewPartDir(i)) << " dAngle = " << deltaAngle << endl;
 			}
 
-			if (worldModel->getFullPlayer(TID_OPPONENT,j).isAlive())
+			if (worldModel->getFullPlayer(TID_OPPONENT, j).isAlive())
 			{
-				deltaAngle = abs(getDeltaAngle(
-					worldModel->getFullPlayer(TID_OPPONENT,j).getAbsVec().getDirection(),
-					worldModel->getViewPartDir(i)));
+				deltaAngle =
+						abs(
+								getDeltaAngle(
+										worldModel->getFullPlayer(TID_OPPONENT, j).getAbsVec().getDirection(),
+										worldModel->getViewPartDir(i)));
 
 				if (deltaAngle <= VIEW_PART_SIZE / 2)
 					viewPartObjectsNums[i]++;
@@ -655,25 +761,29 @@ void HeadDecision::updateViewPartObjectsNum()
 		// Counting half players.
 		for (j = 0; j < HALF_PLAYERS_NUM; j++)
 		{
-			if (worldModel->getHalfPlayer(TID_TEAMMATE,j).isAlive())
+			if (worldModel->getHalfPlayer(TID_TEAMMATE, j).isAlive())
 			{
-				deltaAngle = abs(getDeltaAngle(
-					worldModel->getHalfPlayer(TID_TEAMMATE,j).getAbsVec().getDirection(),
-					worldModel->getViewPartDir(i)));
-				Vector meToHalf = worldModel->getHalfPlayer(TID_TEAMMATE,j).getPos() - worldModel->getBody().getPos();
+				deltaAngle =
+						abs(
+								getDeltaAngle(
+										worldModel->getHalfPlayer(TID_TEAMMATE, j).getAbsVec().getDirection(),
+										worldModel->getViewPartDir(i)));
+//				Vector meToHalf = worldModel->getHalfPlayer(TID_TEAMMATE,j).getPos() - worldModel->getBody().getPos();
 
 				if (deltaAngle <= VIEW_PART_SIZE / 2)
 					viewPartObjectsNums[i]++;
 				/*if (deltaAngle < 30.f)
-					LOG << "HALF unum = " << j + 1 << "angle = " << normalizeAngle(worldModel->getViewPartDir(i)) << " dAngle = " << deltaAngle << " pure angle = "
-						<< worldModel->getHalfPlayer(TID_TEAMMATE,j).getAbsVec().getDirection() << " must be = " << worldModel->getHalfPlayer(TID_TEAMMATE,j).getPos() << endl;*/
+				 LOGH << "HALF unum = " << j + 1 << "angle = " << normalizeAngle(worldModel->getViewPartDir(i)) << " dAngle = " << deltaAngle << " pure angle = "
+				 << worldModel->getHalfPlayer(TID_TEAMMATE,j).getAbsVec().getDirection() << " must be = " << worldModel->getHalfPlayer(TID_TEAMMATE,j).getPos() << endl;*/
 			}
 
-			if (worldModel->getHalfPlayer(TID_OPPONENT,j).isAlive())
+			if (worldModel->getHalfPlayer(TID_OPPONENT, j).isAlive())
 			{
-				deltaAngle = abs(getDeltaAngle(
-					worldModel->getHalfPlayer(TID_OPPONENT,j).getAbsVec().getDirection(),
-					worldModel->getViewPartDir(i)));
+				deltaAngle =
+						abs(
+								getDeltaAngle(
+										worldModel->getHalfPlayer(TID_OPPONENT, j).getAbsVec().getDirection(),
+										worldModel->getViewPartDir(i)));
 
 				if (deltaAngle <= VIEW_PART_SIZE / 2)
 					viewPartObjectsNums[i]++;
@@ -684,54 +794,50 @@ void HeadDecision::updateViewPartObjectsNum()
 		for (j = 0; j < QUARTER_PLAYERS_NUM; j++)
 			if (worldModel->getQuarterPlayer(j).isAlive())
 			{
-				deltaAngle = abs(getDeltaAngle(
-					worldModel->getQuarterPlayer(j).getAbsVec().getDirection(),
-					worldModel->getViewPartDir(i)));
+				deltaAngle = abs(
+						getDeltaAngle(worldModel->getQuarterPlayer(j).getAbsVec().getDirection(),
+								worldModel->getViewPartDir(i)));
 
 				if (deltaAngle <= VIEW_PART_SIZE / 2)
 					viewPartObjectsNums[i]++;
 			}
 
 		// Counting the ball.
-		if (nextBall.getAbsVec().getMagnitude() >
-				worldModel->getBody().getVisibleDistance())
+		if (nextBall.getAbsVec().getMagnitude() > worldModel->getBody().getVisibleDistance())
 		{
-			deltaAngle = abs(getDeltaAngle(
-				nextBall.getAbsVec().getDirection(),
-				worldModel->getViewPartDir(i)));
+			deltaAngle = abs(
+					getDeltaAngle(nextBall.getAbsVec().getDirection(),
+							worldModel->getViewPartDir(i)));
 
 			if (deltaAngle <= VIEW_PART_SIZE / 2)
 				viewPartObjectsNums[i]++;
 		}
 
 		// Counting the opponent goal
-		if (worldModel->getBall().getAbsVec().getMagnitude() < 5 &&
-			worldModel->getBody().getPos().getX() > 30)
+		if (worldModel->getBall().getAbsVec().getMagnitude() < 5
+				&& worldModel->getBody().getPos().getX() > 30)
 		{
 			Vector vec;
 
 			vec.setByPoints(worldModel->getBody().getPos(), Point(52, 5.5));
-			deltaAngle = abs(getDeltaAngle(
-				vec.getDirection(), worldModel->getViewPartDir(i)));
+			deltaAngle = abs(getDeltaAngle(vec.getDirection(), worldModel->getViewPartDir(i)));
 			if (deltaAngle <= VIEW_PART_SIZE / 2)
 				viewPartObjectsNums[i]++;
 
 			vec.setByPoints(worldModel->getBody().getPos(), Point(52, -5.5));
-			deltaAngle = abs(getDeltaAngle(
-				vec.getDirection(), worldModel->getViewPartDir(i)));
+			deltaAngle = abs(getDeltaAngle(vec.getDirection(), worldModel->getViewPartDir(i)));
 			if (deltaAngle <= VIEW_PART_SIZE / 2)
 				viewPartObjectsNums[i]++;
 		}
 
 		// Counting the forward angle
-		if (worldModel->getBall().getAbsVec().getMagnitude() < 3 &&
-			worldModel->getBody().getPos().getX() < 35)
+		if (worldModel->getBall().getAbsVec().getMagnitude() < 3
+				&& worldModel->getBody().getPos().getX() < 35)
 		{
 			Vector vec;
 
 			vec.setAsCartesian(10, 0);
-			deltaAngle = abs(getDeltaAngle(
-				vec.getDirection(), worldModel->getViewPartDir(i)));
+			deltaAngle = abs(getDeltaAngle(vec.getDirection(), worldModel->getViewPartDir(i)));
 			if (deltaAngle <= VIEW_PART_SIZE / 2)
 				viewPartObjectsNums[i]++;
 		}
@@ -744,45 +850,54 @@ float HeadDecision::getViewPartWeight(unsigned viewPartNum)
 	float deltaAngle;
 	Vector oppGoalUpVec;
 	Vector oppGoalDownVec;
-//	LOG << "ang = " << normalizeAngle(worldModel->getViewPartDir(viewPartNum)) << endl;
+//	LOGH << "ang = " << normalizeAngle(worldModel->getViewPartDir(viewPartNum)) << endl;
 	// Dont see weight
 	weight = min(worldModel->getViewPartCycle(viewPartNum), 5u) + 1;
-//	LOG << "1-weights += " << weight << endl;
+//	LOGH << "1-weights += " << weight << endl;
 	// HaveBall weight
-	deltaAngle = abs(getDeltaAngle(worldModel->getViewPartDir(viewPartNum),
-		nextBall.getAbsVec().getDirection()));
-	float ballRate = reRate(deltaAngle / VIEW_PART_SIZE, 0.f, 10.f, 0.f, 1.f, RRM_REVERSE);
+	deltaAngle = abs(
+			getDeltaAngle(worldModel->getViewPartDir(viewPartNum),
+					nextBall.getAbsVec().getDirection()));
+//	float ballRate = reRate(deltaAngle / VIEW_PART_SIZE, 0.f, 10.f, 0.f, 1.f, RRM_REVERSE);
 	//if (deltaAngle <= VIEW_PART_SIZE * 4) // SenseArea
 	//	weight *= haveBallRate * ballRate;
-	if (worldModel->getBody().getDistance(worldModel->getBall().getPos()) > 2.f and deltaAngle < VIEW_PART_SIZE / 2.f)
+	if (worldModel->getBody().getDistance(worldModel->getBall().getPos()) > 2.f
+			and deltaAngle < VIEW_PART_SIZE / 2.f)
 		weight *= haveBallRate /* * ballRate*/;
-	if (worldModel->getBall().getPos().getX() > 48.f and fabs(getDeltaAngle(normalizeAngle(worldModel->getViewPartDir(viewPartNum)), 0.f)) < 40.f
-	    or (worldModel->getBall().getPos().getY() > 27.5f and fabs(getDeltaAngle(normalizeAngle(worldModel->getViewPartDir(viewPartNum)), 90.f)) < 40.f)
-	    or (worldModel->getBall().getPos().getY() < -27.5f and fabs(getDeltaAngle(normalizeAngle(worldModel->getViewPartDir(viewPartNum)), -90.f)) < 40.f))
+	if ((worldModel->getBall().getPos().getX() > 48.f
+			and fabs(getDeltaAngle(normalizeAngle(worldModel->getViewPartDir(viewPartNum)), 0.f))
+					< 40.f)
+			or (worldModel->getBall().getPos().getY() > 27.5f
+					and fabs(
+							getDeltaAngle(normalizeAngle(worldModel->getViewPartDir(viewPartNum)),
+									90.f)) < 40.f)
+			or (worldModel->getBall().getPos().getY() < -27.5f
+					and fabs(
+							getDeltaAngle(normalizeAngle(worldModel->getViewPartDir(viewPartNum)),
+									-90.f)) < 40.f))
 	{
-		//LOG << "Be Out Niga Nakon." << endl;
+		//LOGH << "Be Out Niga Nakon." << endl;
 		weight *= 0.3f;
 	}
 
-//	LOG << "2-weights = " << weight << endl;
+//	LOGH << "2-weights = " << weight << endl;
 	// HavePlayer weight
 	/*if (viewPartObjectsNums[viewPartNum] > 0)
-		weight *= havePlayerRate;
-	else
-		weight *= 0.1f;*/
-//	LOG << "3-weights = " << weight << endl;
+	 weight *= havePlayerRate;
+	 else
+	 weight *= 0.1f;*/
+//	LOGH << "3-weights = " << weight << endl;
 	// ObjectsNum weight
 	//weight += viewPartObjectsNums[viewPartNum] * objectsNumRate;
-//	LOG << "4-weights = " << weight << endl;
+//	LOGH << "4-weights = " << weight << endl;
 	/*Vector toUp, toDown;
-	toUp.setByPoints(worldModel->getBody().getPos(), Point(52.5, 34.f));
-	toDown.setByPoints(worldModel->getBody().getPos(), Point(52.5, -34.f));
-	if (worldModel->getBody().getPos().getX() < 30.f)
-	{
-		if (isBetween(toUp.getDirection(), toDown.getDirection(), worldModel->getViewPartDir(viewPartNum)))
-			weight *= offenseRate;
-	}*/
+	 toUp.setByPoints(worldModel->getBody().getPos(), Point(52.5, 34.f));
+	 toDown.setByPoints(worldModel->getBody().getPos(), Point(52.5, -34.f));
+	 if (worldModel->getBody().getPos().getX() < 30.f)
+	 {
+	 if (isBetween(toUp.getDirection(), toDown.getDirection(), worldModel->getViewPartDir(viewPartNum)))
+	 weight *= offenseRate;
+	 }*/
 
 	return weight;
 }
-

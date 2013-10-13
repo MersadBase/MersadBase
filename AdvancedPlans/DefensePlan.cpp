@@ -14,12 +14,13 @@
  *
  *  Released on Sunday 4 July 2010, 12 Tir 1389 by Mersad RoboCup Team.
  *  For more information please read README file.
-*/
+ */
 
 #include <DefensePlan.h>
-
+#include <Share.h>
 #include <Offense.h>
 #include <Tackle.h>
+#include <MultiStepKick.h>
 #include <Middle.h>
 #include <Command.h>
 #include <Logger.h>
@@ -34,9 +35,10 @@
 
 using namespace std;
 
-// در این فایل کدهای مربوط به بخش دفاع قرار دارند.
+#define LOGD LOG
 
-DefensePlan::DefensePlan(const WorldModel *worldModel): worldModel(worldModel)
+DefensePlan::DefensePlan(const WorldModel *wm) :
+		wm(wm)
 {
 }
 
@@ -46,27 +48,30 @@ DefensePlan::~DefensePlan()
 
 void DefensePlan::decide(Form &form)
 {
-	Tackle tackle(worldModel);
+	Tackle tackle(wm);
 
-	if (worldModel->isBallKickable())
+	if (wm->isBallKickable())
 	{
 		LOG << "\t tup tu kickable e " << endl;
 		doKick(form);
 	}
-	else if (worldModel->getGlobalFastIC().isSelfFastestTeammate())
+	else if (wm->getGlobalFastIC().isSelfFastestTeammate()
+			&& wm->getCurCycle() - Share::lastPass > 10 && wm->getBall().getPos().getX() < 40)
 	{
-		if(tackle.execute(form))
+		if (tackle.execute(form))
 		{
 			command = tackle.getCommand();
 		}
 		else
 		{
-// حال که ما سریع ترین بازیکنی هستیم که می توانیم توپ را بگیریم باید توپ را بگیریم. همان طور که می دانید سریع ترین حالتی که توپ را بگیریم این نیست که مستقیم به سمت توپ حرکت کنیم. سریع ترین حالت این است که توپ را در مسیرش قطع کنیم. برای این کار می توانیم از کلاس Intercept استفاده کنیم. توضیحات مربوط به هر کدام از تابع های زیر در فایل Intercept.h آمده است.
-			Intercept intercept = Intercept(worldModel);
+			Intercept intercept = Intercept(wm);
+			LOGD << "Intercept Created" << endl;
 			intercept.getValue();
+			LOGD << "Intercept GetValued" << endl;
 			intercept.execute(form);
-// در خط زیر command دفاع را برابر با command نمونه ی ساخته شده از کلاس Intercept قرار می دهیم.
+			LOGD << "Intercept Exectued" << endl;
 			command = intercept.getCommand();
+			LOGD << "Intercept Commanded" << endl;
 		}
 	}
 	else
@@ -77,20 +82,48 @@ void DefensePlan::decide(Form &form)
 
 void DefensePlan::doPositioning()
 {
-// حال که نمی خواهیم به دنبال توپ برویم باید جایگیری کنیم. برای پیدا کردن جای خود می توانیم از تابع زیر که از فایل PlayOnPositioning.conf اطلاعات مربوط به جایگیری را می خواند, استفاده کنیم.
-	Point targetPoint = worldModel->getFormation().getPosition(worldModel->getBody().getUniNum(), worldModel->getBall().getPos());
-// حال که نقطه ی مورد نظر به دست آمده باید به سمت آن نقطه حرکت کنیم. برای این کار از کلاس DashNormalGotoPoint استفاده می کنیم. اطلاعات مربوط به این کلاس در فایل BasicDash.h آمده است.
-	command = DashNormalGotoPoint(targetPoint, 0.75, worldModel->getBody()).getCommand();
+//	Point targetPoint = wm->getFormation().getPosition(wm->getBody().getUniNum(), wm->getBall().getPos());
+	Point targetPoint = wm->getPlayOnFormation().getPosition(wm->getBody().getUniNum()-1, wm->getBall().getPos());
+//	Point targetPoint;
+//	targetPoint.y = 0;
+//	if (wm->getBody().getUniNum() == 2)
+//		targetPoint.x = 20;
+//	else
+//		targetPoint.x = -20;
+	command = DashNormalGotoPoint(targetPoint, 0.75, wm->getBody()).getCommand();
 }
 
 void DefensePlan::doKick(Form& form)
 {
-	command = new EmptyCommand();
-	return;
+//	Point target;
+//	if (wm->getBody().getUniNum() == 2)
+//		target.x = -20;
+//	else
+//		target.x = 20;
+//	target.y = -10;
+//	target.y += wm->getCurCycle() % 20;
+//	MultiStepKick hi(wm, wm->getBody(), wm->getBall(), target, 3, 10);
+//	hi.calculate();
+//	command = hi.getCommand();
+//	Share::chain.clear();
+//	for (int i = 1; i < hi.getMaxAvailableStep(); i++)
+//	{
+//		Share::chain.push_back(hi.getChain(i));
+//		Share::chain.back().cycle = wm->getCurCycle() + i;
+//	}
+//	Share::lastPass = wm->getCurCycle();
+//	return;
+//	HoldBall hb(wm);
+//	hb.decide();
+//	command = hb.getCommand();
+//	return;
 
-	Shoot shoot(worldModel);
-	Dribble dribble(worldModel);
-	Pass pass(worldModel);
+//	command = new EmptyCommand();
+//	return;
+
+	Shoot shoot(wm);
+	Dribble dribble(wm);
+	Pass pass(wm);
 	LOG << "\tsakhtan ha tamum shod" << endl;
 	if (shoot.execute())
 	{
@@ -102,7 +135,7 @@ void DefensePlan::doKick(Form& form)
 		LOG << "\tsalam" << endl;
 		LOG << "\tDribble.getValue() = " << dribble.getValue() << endl;
 		LOG << "\tPass.getValue() = " << pass.getValue() << endl;
-		if(dribble.getValue() >= pass.getValue())
+		if (dribble.getValue() >= pass.getValue() && false)
 		{
 			LOG << "\tdribble mikonam " << endl;
 			dribble.decide(form);
@@ -121,4 +154,3 @@ Command* DefensePlan::getCommand()
 {
 	return command;
 }
-

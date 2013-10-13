@@ -217,3 +217,12 @@ float Vector::getDistance(const Vector vec) const
 {
 	return hypot(x - vec.getX(), y - vec.getY());
 }
+
+float Vector::innerProduct(const Vector &vec)const{
+	return x*vec.getX() + y * vec.getY();
+}
+
+float Vector::crossProduct(const Vector& v) const
+{
+	return (v.getX() * y) - (v.getY() * x);
+}

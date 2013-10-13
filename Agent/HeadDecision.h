@@ -50,17 +50,18 @@ protected:
 	const AdvancedAgent *owner;
 	const WorldModel *worldModel;
 
-	void decideForLookCarefullyToBall();
+	void decideForLookCarefullyToBall(TurnNeckMode &tnMode);
 	void decideForLookCarefullyToOppGoalie(TurnNeckMode &tnMode);
 	void decideForLookNormallyToOurGoalie(TurnNeckMode &tnMode);
 	void decideForLookCarefullyToOppPlayer(TurnNeckMode &tnMode, unsigned attentionNum);
 	void decideForTurnNeckCommand(float nextViewAngle);
-	void decideForLookNormallyToBall(float nextViewAngle, TurnNeckMode &tnMode);
+	void decideForLookNormallyToBall(TurnNeckMode &tnMode);
 	void decideForLookCarefullyToOppAndBall(TurnNeckMode &tnMode, unsigned attentionNum);
 	void decideForOffensiveIntercept(TurnNeckMode &tnMode);
 	void decideForLookToReceiver(TurnNeckMode &tnMode, unsigned attentionNum);
 	void decideForOffensiveLook(TurnNeckMode &tnMode);
-	void decideForLookToDir(TurnNeckMode &tnMode, float direction);
+	void decideForLookToDir(float direction);
+	void decideForLookToBall(ViewModeWidth &width);
 	void decideForLookToTmmAndBall(TurnNeckMode &tnMode, unsigned attentionNum);
 
 	void logVariables();

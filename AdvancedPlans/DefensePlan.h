@@ -27,12 +27,12 @@ class DefensePlan
 {
 private:
 	Command *command;
-	const WorldModel *worldModel;
+	const WorldModel *wm;
 
 protected:
 
 public:
-	DefensePlan(const WorldModel *worldModel);
+	DefensePlan(const WorldModel *wm);
 	~DefensePlan();
 
 	void doKick(Form& form);

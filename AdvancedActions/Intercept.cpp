@@ -10,11 +10,11 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU Library General Public License for more details.
  *
- *  This file is created by: Pooria Kaviani
+ *  This file is created by: Mohammad Amin Khashkhashi Moghaddam
  *
  *  Released on Sunday 4 July 2010, 12 Tir 1389 by Mersad RoboCup Team.
  *  For more information please read README file.
-*/
+ */
 
 #include <cmath>
 #include <iostream>
@@ -29,536 +29,268 @@
 #include <HeadDecision.h>
 #include <AdvancedAgent.h>
 
-//#define LOG_PLAYER
+#define LOGI LOG
 
 using namespace std;
 using namespace Basics;
 using namespace Degree;
 
-Intercept::Intercept(const WorldModel *wm): wm(wm)
-{
-	goalieMode = false;
-	goalieMinusTime = 0;
-	stopICStart = false;
-	defenseBlock = false;
-	defenseKickable = 0;
-	goalieKickable = 0;
-	interceptTime = 0;
-	maxWithTurn = 0;
-	maxMinus = 0;
-	maxPlus = 0;
-	SRP = false;
-	shoot = false;
-	interceptPoint = Point(-60, -60);
+std::ostream &operator<<(std::ostream &stream, const InterceptType &entry) {
+	std::string str[] = { "WAIT_INTERCEPT", "FORWARD_DASH_INTERCEPT",
+			"BACK_DASH_INTERCEPT", "TURN_INTERCEPT", "SIDE_DASH_INTERCEPT",
+			"STOP_TURN_INTERCEPT", "ADJUSTED_DASH_INTERCEPT" };
+	stream << str[entry];
+	return stream;
 }
 
-void Intercept::execute(Form &form)
-{
-	LOG << "Intercept::execute" << endl;
+Intercept::Intercept(const WorldModel *wm) :
+		wm(wm) {
+	firstBall = wm->getBall();
+	firstBody = wm->getBody();
+}
 
-// Look Carefully to Ball
+void Intercept::execute(Form &form) {
+	LOGI<< "Intercept::execute" << endl;
 	form.headForm.tnMode = TNM_LOOK_CAREFULLY_TO_BALL;
-
 	form.comment.addComment("InterceptAdvAct");
 }
 
-float Intercept::getValue()
-{
-#ifdef LOG_PLAYER
-	LOG << "Intercept::getValue" << endl;
-#endif
-
-	stopICStart = false;
-	interceptTime = 0;
-
-// Checking for who is fastest teammate or opponent
-	if (goalieMode == false && defenseBlock == false && SRP == false)
-		firstBall = wm->getBall();
-
-	if (!SRP)
-		firstBody = wm->getBody();
-
-	if (firstBall.getDistance(firstBody) <= getKickableDist())
-	{
-		interceptTime = 0;
-		interceptPoint = firstBall.getPos();
-		command = new EmptyCommand();
-		return 1;
+void Intercept::calculate() {
+	if (wm->getCurCycle() == 50) {
+		LOGI<< "BOZ" <<endl;
 	}
-
-	Vector vec;
-	vec.setAsPolar(10, firstBody.getBodyDir());
-	Command *dash = DashNormalGotoPoint(firstBody.getPos() + vec, getKickableDist(), firstBody).getCommand();
-
-//---------------------------------------------------------------------------------------------------------------------//	
-/**************************************************** Turn Intercept***********************************************************/
-//---------------------------------------------------------------------------------------------------------------------//	
-
-	unsigned turnInterceptTime = 0;
-
-	float dashDist = 0;
-	Body tmpBody = firstBody;
-	Body virBody = firstBody;
-	virBall = firstBall;
-	tmpBody.setVel().setAsCartesian(0, 0);
-
-	Command *turnCommand = NULL;
-	unsigned time = 0;
-	Point withTurnPoint, finalWithTurnInterceptPoint(-60, -60);
-
-	if (!SRP)
-		maxWithTurn = 99;
-	for (unsigned i = 1; i < maxWithTurn; i++)
+	const int MAXCYCLE = 100;
+	InterceptEntry bestEntry;
+	bestEntry.reachCycle = MAXCYCLE * 2;
+	Point ballPosCache[MAXCYCLE]; //toop koja mire
+	Point bodyPosCache[MAXCYCLE];//age player ro vel konim koja mire
+	float playerDistCache[MAXCYCLE];//age hey dash konim cheghadr mirim jolo stamina dar nazar gerefte mishe
+	LOGI<< "Filling Caches" << endl;
 	{
-		tmpBody = firstBody;
-		virBody = firstBody;
-		virBall = firstBall;
-		tmpBody.setVel().setAsCartesian(0, 0);
-		dashDist = 0;
-		turnInterceptTime = 0;
-		while (true)
-		{
-			if (virBall.getDistance(virBody) < dashDist + getKickableDist())
-				break;
-			// One cycle past
-			if (turnInterceptTime > i - 1)
+		//filling Caches
+		Body tBody = firstBody;
+		tBody.setVel() = Vector(0, 0);
+		tBody.setPos() = Vector(0, 0);
+		tBody.setBodyDir(0);
+		ballPosCache[0] = firstBall.getPos();
+		bodyPosCache[0] = firstBody.getPos();
+		playerDistCache[0] = 0;
+		Vector ballVel = firstBall.getVel();
+		Vector bodyVel = firstBody.getVel();
+		for (int i = 1; i < MAXCYCLE; i++) {
+			float dashPower = 100;
+			dashPower = wm->getSafetyDashPower(dashPower, tBody.getStamina());
+			DashCommand dashX(dashPower);
+			tBody.simulateByAction(&dashX);
+			tBody.simulateByDynamics();
+			playerDistCache[i] = tBody.getPos().getX();
+
+			ballPosCache[i] = ballPosCache[i - 1];
+			ballPosCache[i] += ballVel;
+			ballVel *= firstBall.getDecay();
+
+			bodyPosCache[i] = bodyPosCache[i - 1];
+			bodyPosCache[i] += bodyVel;
+			bodyVel *= firstBody.getDecay();
+		}
+	}
+	LOGI<< "Filling Finished" << endl;
+	LOGI<< "Turn and Stop Check" << endl;
+	const int dirs[] = {0, 45, 90, 135, 180, -45, -90, -135};
+	for (int i = 1; i < MAXCYCLE; i++) {
+
+		if (firstBody.getVel().getMagnitude() > 0.05) { //Stop Then Turn Then Dash
+			int cycleLeft = i - 1;//ye cycle bara stop hadar mire
+			float velDir = firstBody.getVel().getDirection()
+			- firstBody.getBodyDir();
+			int bj = 0;
+			for (int j = 1; j < 8; j++)//finding best direction for tormoz
 			{
-				tmpBody.simulateByAction(dash);
-				tmpBody.simulateByDynamics();
-				dashDist = tmpBody.getDistance(firstBody);
+				if (fabs(normalizeAngle(velDir - dirs[j]))
+						< fabs(normalizeAngle(velDir - dirs[bj])))
+				bj = j;
 			}
-			turnInterceptTime++;
-			virBody.simulateByDynamics();
-			virBall.simulateByDynamics(firstBody);
-		}
-		withTurnPoint = virBall.getPos();
-
-		TurnToPoint lastTurnCommand(withTurnPoint, firstBody);
-		turnCommand = lastTurnCommand.getCommand();
-		time = 0;
-		Body body = firstBody;
-		while (true)
-		{
-			time++;
-			if (lastTurnCommand.isOneTurnPossible())
-				break;
-			body.simulateByAction(lastTurnCommand.getCommand());
-			body.simulateByDynamics();
-			lastTurnCommand = TurnToPoint(withTurnPoint, body);
-		}
-
-		if (time <= i)
-		{
-			finalWithTurnInterceptPoint = virBall.getPos();
-			break;
-		}
-	}
-// For Debug
-	virBody = firstBody;
-	virBall = firstBall;
-	unsigned pt = time;
-
-	Command *lastTurnCommand = turnCommand;
-	for (unsigned t = 0; t < time; t++)
-	{
-		virBody.simulateByAction(lastTurnCommand);
-		virBody.simulateByDynamics();
-		lastTurnCommand = TurnToPoint(withTurnPoint, virBody).getCommand();
-	}
-
-	Point p[100];
-	int ss = -1;
-
-//LOG << "kci: " << getKickableDist() << endl;
-	for (unsigned i = 0; i < 100;  i++)
-	{
-		p[i] = virBody.getPos();
-//LOG << "!" << endl;
-//LOG << "VirBAL: " << virBall.getPos() << endl;
-		for (unsigned j = 0; j <= i; j++)
-		{
-//LOG << "Dist: " << virBall.getDistance(p[j]) << endl;
-			if (virBall.getDistance(p[j]) < getKickableDist())
+			if (fabs(normalizeAngle(velDir - dirs[bj]) < 10)) // badan hazfesh kon
 			{
-				ss = j;
-				break;
+				int revDir = normalizeAngle(dirs[bj] + 180);
+				cycleLeft--; //ye cycle ham bara turn hadar mire
+				Vector vv;
+				vv.setAsPolar(firstBody.getVel().getMagnitude(),
+						fabs(normalizeAngle(velDir - dirs[bj])));
+				float velNeed = vv.getX();
+				float powerNeed = velNeed
+				/ (firstBody.getDashDirRate(dirs[bj])
+						* firstBody.getDashPowerRate()
+						* firstBody.getEffort());
+				powerNeed = min(powerNeed, 100.f);
+				Body stopBody = firstBody;
+				DashCommand stopCommand(powerNeed, -revDir);//zavie ha too server barakse
+				stopBody.simulateByAction(&stopCommand);
+				stopBody.simulateByDynamics();
+				//khob ye tormoz zadim hala bayad zavie ro dorost konim
+				const float turnInertia = stopBody.getTurnInertia();
+				const float maxDeltaDir = 180.f / turnInertia;
+				Vector bodyDir = ballPosCache[i] - stopBody.getPos();//directioni ke badanam bayad bashe
+				float deltaDir = normalizeAngle(
+						bodyDir.getDirection() - firstBody.getBodyDir());
+				if (fabs(deltaDir) > maxDeltaDir) {
+					//zereshk ye tormoz zadim bazam nashod ba ye turn dorostesh konam sag khord ye turn dige ham mikonam mishe goft dige soratemoon 0 hast
+					cycleLeft--;
+					stopBody.simulateByDynamics();//daram alan turn mikonam
+				}
+				if (cycleLeft > 0
+						&& ballPosCache[i].getDistance(stopBody.getPos())
+						< playerDistCache[cycleLeft]
+						+ wm->getKickableArea()) //in kar ghalate chon stamina ye cycle inja hefz shode
+				{
+//					LOGI << "Adding Stop Intercept Entry WIth Reach Cycle : " << i << endl;
+					InterceptEntry entry;
+					entry.reachCycle = i;
+					entry.type = STOP_TURN_INTERCEPT;
+					entry.inKickable = playerDistCache[cycleLeft]
+					+ wm->getKickableArea()
+					- ballPosCache[i].getDistance(stopBody.getPos());
+					entry.command = new DashCommand(powerNeed, -revDir);
+					if (entry < bestEntry)
+					bestEntry = entry;
+				}
 			}
 		}
-		if (ss != -1)
-			break;
-		// One cycle past
-		virBody.simulateByAction(dash);
-		virBody.simulateByDynamics();
-		virBall.simulateByDynamics(virBody);
-		pt++;
-	}
-
-	if (wm->getBody().getPos().getX() > 10
-			and (pt > 8 && abs(normalizeAngle(firstBody.getBodyDir() -
-			(Vector(withTurnPoint) - firstBody.getPos()).getDirection())) <
-			(Vector(withTurnPoint) - firstBody.getPos()).getMagnitude() * .8f))
-		turnCommand = dash;
-	turnInterceptTime = pt;
-
-#ifdef LOG_PLAYER
-	LOG << "~PT: " << pt << endl;
-#endif
-//---------------------------------------------------------------------------------------------------------------------//	
-/************************************************* Minus Dash***********************************************************/
-//---------------------------------------------------------------------------------------------------------------------//	
-
-	DashCommand dashMinus(-100);
-	virBody = firstBody;
-	virBall = firstBall;
-	bool minusInterceptPossible;
-	unsigned minusInterceptTime = 0;
-
-	Point minusPoints[6], finalMinusInterceptPoint(-60, -60);
-	int s = -1;
-	if (!SRP)
-		maxMinus = 6;
-	if (goalieMode)
-		maxMinus = goalieMinusTime;
-	if (defenseBlock)
-		maxMinus = 0;
-	for (unsigned i = 0; i < maxMinus; i++)
-	{
-		minusPoints[i] = virBody.getPos();
-		for (unsigned j = 0; j <= i; j++)
-		{
-			if (virBall.getDistance(minusPoints[j]) < getKickableDist())
-			{
-				s = j;
-				j = i + 1;
+		{ //turn without stop
+			const float turnInertia = firstBody.getTurnInertia();
+			const float maxDeltaDir = 180.f / turnInertia;
+			Vector bodyDir = ballPosCache[i] - bodyPosCache[i];//directioni ke badanam bayad bashe
+			float deltaDir = normalizeAngle(
+					bodyDir.getDirection() - firstBody.getBodyDir());
+			if (fabs(deltaDir) < maxDeltaDir && fabs(deltaDir) > 5) {
+				//mitoonam badanamo oon ghadr becharkhoonam
+//				LOGI << " Delta Dir : " << fabs(deltaDir) << endl;
+				if (ballPosCache[i].getDistance(bodyPosCache[i])
+						< playerDistCache[i - 1] + wm->getKickableArea()) {
+					InterceptEntry entry;
+//					LOGI << " Adding Entry with Reach Cycle : " << i << endl;
+					entry.reachCycle = i;
+					entry.type = TURN_INTERCEPT;
+					entry.inKickable = playerDistCache[i - 1]
+					+ wm->getKickableArea()
+					- ballPosCache[i].getDistance(bodyPosCache[i]);
+					entry.command = new TurnCommand(deltaDir * turnInertia);
+					if (entry < bestEntry)
+					bestEntry = entry;
+				}
 			}
 		}
-		if (s != -1)
-		{
-			finalMinusInterceptPoint = virBall.getPos();
-			break;
-		}
-		// One cycle past
-		virBody.simulateByAction(&dashMinus);
-		virBody.simulateByDynamics();
-		virBall.simulateByDynamics(virBody);
-		minusInterceptTime++;
 	}
-
-	Command *minusCommand = new EmptyCommand();
-
-	if ((s >= 1 || (SRP && s >= 0)) && minusInterceptTime > 0 && (firstBody.getStamina() > 1400 || SRP) && !defenseBlock)
+	LOGI<< "Checking 8 Directions" << endl;
+	vector<int> adjustDirs;
+	{ //checking each 8 directions for some cycles
+		int mc[] = {100, 8, 8, 8, 8, 8, 8, 8}; // max cycle for each direction
+//		{ 100, 10, 50, 10, 100, 10, 50, 10 }; // max cycle for each direction
+		for (int i = 0; i < 8; i++) {
+			Body tBody = firstBody;
+			Body waitBody = firstBody;
+			for (int j = 1; j <= mc[i]; j++) {
+				float dashPower = wm->getSafetyDashPower(100,
+						tBody.getStamina());
+				DashCommand dashX(dashPower, dirs[i]);
+				tBody.simulateByAction(&dashX);
+				if (j > 1) {
+					float waitPower = wm->getSafetyDashPower(100,
+							waitBody.getStamina());
+					DashCommand dashX2(waitPower, dirs[i]);
+					waitBody.simulateByAction(&dashX2);
+				}
+				tBody.simulateByDynamics();
+				waitBody.simulateByDynamics();
+				Segment seg(waitBody.getPos(), bodyPosCache[j]);
+				if (seg.getDist(ballPosCache[j]) < wm->getKickableArea()
+						&& j == 2) //in j==2 chize khoobi nist bayad dorost she
+				{
+					InterceptEntry entry;
+					entry.reachCycle = j;
+					entry.type = WAIT_INTERCEPT;
+					entry.inKickable = wm->getKickableArea()
+					- seg.getDist(ballPosCache[j]);
+					entry.command = new EmptyCommand();
+					if (entry < bestEntry)
+					bestEntry = entry;
+				}
+				Segment seg2(tBody.getPos(), bodyPosCache[j]);
+				if (seg2.getDist(ballPosCache[j]) < wm->getKickableArea()) {
+					InterceptEntry entry;
+					entry.reachCycle = j;
+					if (dirs[i] == 0)
+					entry.type = FORWARD_DASH_INTERCEPT;
+					else if (dirs[i] == 180)
+					entry.type = BACK_DASH_INTERCEPT;
+					else
+					entry.type = SIDE_DASH_INTERCEPT;
+					dashPower = 100;
+					dashPower = wm->getSafetyDashPower(dashPower,
+							firstBody.getStamina());
+					entry.command = new DashCommand(dashPower, dirs[i]);
+					entry.inKickable = wm->getKickableArea()
+					- seg2.getDist(ballPosCache[j]);
+					if (entry < bestEntry)
+					bestEntry = entry;
+					if (j == 1)
+					adjustDirs.push_back(dirs[i]);
+					break;
+				}
+			}
+		}
+	}
+	if (adjustDirs.size()) //we are gonna get the ball next cycle so it's important how to dash so the ball is in the best position relative to our body
 	{
-		minusInterceptPossible = true;
-		minusCommand = new DashCommand(-100);
+		bestEntry.type = ADJUSTED_DASH_INTERCEPT;
+		float bestAccel = -1;
+		for (int i = 0; i < adjustDirs.size(); i++) {
+			int dir = adjustDirs[i];
+			Ball nextBall = firstBall;
+			nextBall.simulateByDynamics(firstBody);
+			for (int power = 0; power <= 100; power += 5) {
+				Body tBody = firstBody;
+				double finalPower = wm->getSafetyDashPower(power,
+						firstBody.getStamina());
+				DashCommand dash(finalPower, dir);
+				tBody.simulateByAction(&dash);
+				tBody.simulateByDynamics();
+				float accel = tBody.getBallAccelMax(nextBall);
+				if (accel > bestAccel) {
+					bestAccel = accel;
+					bestEntry.command = new DashCommand(finalPower, dir);
+					bestEntry.inKickable = wm->getKickableArea()
+					- tBody.getPos().getDistance(nextBall.getPos());
+				}
+			}
+		}
+	}
+	command = NULL;
+	if (bestEntry.reachCycle <= MAXCYCLE) {
+		command = bestEntry.command;
+		interceptPoint = ballPosCache[bestEntry.reachCycle];
+		interceptTime = bestEntry.reachCycle;
+		LOGI<< "Best Candidate Reach Cycle : " << bestEntry.reachCycle << endl;
+		LOGI<< "Best Candidate Reach Type : " << bestEntry.type << endl;
+		LOGI<< "Best Candidate inKickable : " << bestEntry.inKickable << endl;
+		LOGI<< "Best Candidate Reach Point : "<<interceptPoint<<endl;
 	}
 	else
-	{
-		minusInterceptPossible = false;
-		minusInterceptTime = 999999999;
-	}
-
-//---------------------------------------------------------------------------------------------------------------------//	
-/************************************************* Plus Dash************************************************************/
-//---------------------------------------------------------------------------------------------------------------------//
-
-	virBody = firstBody;
-	virBall = firstBall;
-	dash = DashNormalGotoPoint(firstBody.getPos() + vec, getKickableDist(), firstBody).getCommand();
-	bool plusInterceptPossible;
-	unsigned plusInterceptTime = 0;
-
-	Point points[100], finalPlusInterceptPoint(-60, -60);
-	s = -1;
-
-	unsigned tmpTime = 0;
-	if (!SRP)
-		maxPlus = 100;
-	for (unsigned i = 0; i < maxPlus;  i++)
-	{
-//LOG << "!" << endl;
-//LOG << "VIR: " << virBall.getPos() << endl;
-		points[i] = virBody.getPos();
-		for (unsigned j = 0; j <= i; j++)
-		{
-//LOG << "DIST: " << virBall.getDistance(points[j]) << endl;
-			if (virBall.getDistance(points[j]) <= getKickableDist())
-			{
-				s = j;
-				if (s == 0)
-					tmpTime = plusInterceptTime;
-				break;
-			}
-		}
-		if (s != -1)
-		{
-			finalPlusInterceptPoint = virBall.getPos();
-			break;
-		}
-		// One cycle past
-		virBody.simulateByAction(dash);
-		virBody.simulateByDynamics();
-		virBall.simulateByDynamics(virBody);
-		plusInterceptTime++;
-	}
-
-	Command *plusCommand = new EmptyCommand();
-
-	if (s >= 1 && plusInterceptTime > 0)
-	{
-		plusInterceptPossible = true;
-		plusCommand = dash;
-	}
-	else
-	{
-		plusInterceptPossible = false;
-		plusInterceptTime = 999999999;
-	}
-
-//---------------------------------------------------------------------------------------------------------------------//	
-/**************************************************** Stop Intercept **********************************************************/
-//---------------------------------------------------------------------------------------------------------------------//	
-
-	bool stopInterceptPossible;
-	unsigned stopInterceptTime = 1;
-	Command *stopCommand = new EmptyCommand();
-
-	stopICStart = true;
-
-	Point finalStopInterceptPoint = firstBall.getPos();
-	if (s == 0)
-	{
-		stopInterceptPossible = true;
-		virBody = firstBody;
-		virBall = firstBall;
-		for (stopInterceptTime = 0; stopInterceptTime < tmpTime; stopInterceptTime++)
-		{
-			virBody.simulateByDynamics();
-			virBall.simulateByDynamics(virBody);
-		}
-
-		if (virBody.getDistance(virBall) > getKickableDist())
-		{
-			virBody = firstBody;
-			virBall = firstBall;
-			Command *tmpCom = new DashCommand(50);
-			virBody.simulateByAction(tmpCom);
-			for (unsigned i = 0; i < tmpTime; i++)
-			{
-				virBody.simulateByDynamics();
-				virBall.simulateByDynamics(virBody);
-			}
-			float firstDist = virBody.getDistance(virBall);
-			tmpCom = new DashCommand(-50);
-			virBody = firstBody;
-			virBall = firstBall;
-			virBody.simulateByAction(tmpCom);
-			for (unsigned i = 0; i < tmpTime; i++)
-			{
-				virBody.simulateByDynamics();
-				virBall.simulateByDynamics(virBody);
-			}
-			float secondDist = virBody.getDistance(virBall);
-			if (firstDist < secondDist)
-				stopCommand = new DashCommand(50);
-			else
-				stopCommand = new DashCommand(-50);
-			virBody = firstBody;
-			virBall = firstBall;
-			virBody.simulateByAction(stopCommand);
-			virBody.simulateByDynamics();
-			virBall.simulateByDynamics(virBody);
-			if (virBody.getDistance(virBall) > getKickableDist())
-			{
-				if (firstDist < secondDist)
-					stopCommand = new DashCommand(75);
-				else
-					stopCommand = new DashCommand(-75);
-			}
-		}
-		else
-		{
-			stopInterceptPossible = false;
-			stopInterceptTime = 999999999;
-		}
-	}
-	else
-	{
-		stopInterceptPossible = false;
-		finalStopInterceptPoint = Point(-60, -60);
-		stopInterceptTime = 999999999;
-	}
-
-// Select Best InterCept From Turn InterCept, Minus InterCept, Plus(Stright) InterCept and Stop InterCept
-
-	unsigned min = turnInterceptTime;
-
-	command = turnCommand;
-	interceptTime = turnInterceptTime;
-	interceptPoint = finalWithTurnInterceptPoint;
-
-	unsigned log = 1;
-	if (!SRP)
-	{
-		if (plusInterceptPossible && plusInterceptTime <= min)
-		{
-			min = plusInterceptTime;
-			log = 2;
-			interceptTime = plusInterceptTime;
-			interceptPoint = finalPlusInterceptPoint;
-			command = plusCommand;
-		}
-
-		if (minusInterceptPossible && minusInterceptTime < min)
-		{
-			min = minusInterceptTime;
-			log = 3;
-			interceptTime = minusInterceptTime;
-			interceptPoint = finalMinusInterceptPoint;
-			command = minusCommand;
-		}
-
-		if (stopInterceptPossible && stopInterceptTime < min)
-		{
-			min = stopInterceptTime;
-			log = 4;
-			interceptTime = stopInterceptTime;
-			interceptPoint = finalStopInterceptPoint;
-			command = stopCommand;
-		}
-	}
-	else
-	{
-		min -= 1;
-		if (plusInterceptPossible && plusInterceptTime <= min)
-		{
-			min = plusInterceptTime;
-			log = 2;
-			interceptTime = plusInterceptTime;
-			interceptPoint = finalPlusInterceptPoint;
-			command = plusCommand;
-		}
-
-		if (minusInterceptPossible && minusInterceptTime < min)
-		{
-			min = minusInterceptTime;
-			log = 3;
-			interceptTime = minusInterceptTime;
-			interceptPoint = finalMinusInterceptPoint;
-			command = minusCommand;
-		}
-
-		if (stopInterceptPossible && stopInterceptTime < min)
-		{
-			min = stopInterceptTime;
-			log = 4;
-			interceptTime = stopInterceptTime;
-			interceptPoint = finalStopInterceptPoint;
-			command = stopCommand;
-		}
-	}
-
-#ifdef LOG_PLAYER
-		LOG << "~Turn Time: " << turnInterceptTime << endl;
-		LOG << "~Stright Time: " << plusInterceptTime << endl;
-		LOG << "~Minus Time: " << minusInterceptTime << endl;
-		LOG << "~Stop Time: " << stopInterceptTime << endl;
-
-		if (log == 1)
-			LOG << "~Turn InterCeption" << endl;
-		if (log == 2)
-			LOG << "~Stright InterCeption" << endl;
-		if (log == 3)
-			LOG << "~Minus InterCeption" << endl;
-		if (log == 4)
-			LOG << "~Stop InterCeption" << endl;
-		LOG << "InterceptPoint: " << interceptPoint << endl;
-		LOG << "InterceptTime: " << interceptTime << endl;
-#endif
-
-	return 1;
+	LOGI << "CRAP!!! THERE IS NO CANDIDATE" << endl;
 }
 
-Command *Intercept::getCommand()
-{
-	return command;
+void Intercept::getValue() {
+	calculate();
 }
 
-float Intercept::getKickableDist()
-{
-	float kickableDist = (wm->getBall().getSize() + firstBody.getKickableMargin() + firstBody.getSize());
-//	if (firstBody.getTeamId() == TID_OPPONENT)
-//		kickableDist *= 100 / 91;
-
-	if (stopICStart)
-		kickableDist = 0.9;
-
-	if (firstBody.isGoalie() && firstBody.getTeamId() == TID_TEAMMATE
-		&& virBall.getPos().getX() <= -36 && abs(virBall.getPos().getY()) <= 20.01)
-	{
-//		kickableDist = hypot(firstBody.getCatchableAreaL(), (firstBody.getCatchableAreaW() / 2)) - 0.1;
-		kickableDist = 1.2;
-	}
-
-	if (shoot && virBall.getPos().getX() >= 36 && abs(virBall.getPos().getY()) <= 20.01)
-	{
-//		kickableDist = hypot(firstBody.getCatchableAreaL(), (firstBody.getCatchableAreaW() / 2)) - 0.1;
-		kickableDist = 1.2;
-	}
-
-	if (goalieMode)
-		kickableDist = goalieKickable;
-	if (defenseBlock)
-		kickableDist = defenseKickable;
-
-	return kickableDist;
+Point Intercept::getInterceptPoint() const {
+	return interceptPoint;
 }
 
-void Intercept::setBall(const Ball *ball)
-{
-	firstBall = *ball;
-}
-
-void Intercept::setBody(const Body *body)
-{
-	firstBody = *body;
-}
-
-unsigned Intercept::getInterceptTime()
-{
+unsigned Intercept::getInterceptTime() const {
 	return interceptTime;
 }
 
-void Intercept::setMaxPlus(unsigned a)
-{
-	maxPlus = a;
-}
-
-void Intercept::setMaxMinus(unsigned a)
-{
-	maxMinus = a;
-}
-
-void Intercept::setMaxWithTurn(unsigned a)
-{
-	maxWithTurn = a;
-}
-
-unsigned Intercept::getMaxPlus()
-{
-	return maxPlus;
-}
-
-unsigned Intercept::getMaxMinus()
-{
-	return maxMinus;
-}
-
-unsigned Intercept::getMaxWithTurn()
-{
-	return maxWithTurn;
-}
-
-Point Intercept::getInterceptPoint()
-{
-	return interceptPoint;
+Command *Intercept::getCommand() {
+	return command;
 }

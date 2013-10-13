@@ -11,11 +11,11 @@
  *  GNU Library General Public License for more details.
  *
  *  This file is created by: Ahmad Boorghany
+ *  	and is modified by: Mohammadreza Montazeri
  *
- *  Released on Sunday 4 July 2010, 12 Tir 1389 by Mersad RoboCup Team.
+ *  Released on Monday 13 September 2010, 22 Shahrivar 1389 by Mersad RoboCup Team.
  *  For more information please read README file.
 */
-
 #ifndef __SAY_DECISION_H
 #define __SAY_DECISION_H
 
@@ -27,40 +27,28 @@
 class Command;
 class WorldModel;
 
+
 class SayDecision
 {
 protected:
 	const WorldModel *worldModel;
 	Command *sayCommand;
 	Command *attentionCommand;
+	CodeItem curCode;
 
 public:
 	SayDecision(const WorldModel *worldModel);
 	~SayDecision();
-
-	int getSayRoutinBallPermission(const SayDecisionForm &sayForm);
-
-	void sayDefense(const SayDecisionForm &sayForm);
-	void sayDFB(const SayDecisionForm &sayForm);
-	void sayPass(const SayDecisionForm &sayForm);
-	void sayRadar(const SayDecisionForm &sayForm);
-	void sayFreeKick(const SayDecisionForm &sayForm);
-	void sayBeforePass(const Command *bodyCycleCommand,
-			const SayDecisionForm &sayForm);
-	void sayRoutinBall(const Command *bodyCycleCommand,
-			const SayDecisionForm &sayForm);
-	void sayRoutinBallWithoutVel(const Command *bodyCycleCommand,
-			const SayDecisionForm &sayForm);
-
-//	void saySuggestPass(const SayDecisionForm &sayForm);
-//	void sayBeforePassRelated(const Command *bodyCycleCommand, const SayDecisionForm &sayForm);
 
 	void decide(const Command *bodyCycleCommand,
 			const SayDecisionForm &sayForm);
 
 	Command *getSayCommand();
 	Command *getAttentionCommand();
+private:
+	void addSayCode(CodeItem& code);
+	void sayPass(const Command *bodyCycleCommand, const SayDecisionForm &sayForm);
+
 };
 
 #endif // __SAY_DECISION_H
-

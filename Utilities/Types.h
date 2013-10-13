@@ -75,6 +75,12 @@ struct Point
 
 std::ostream &operator<<(std::ostream &stream, const Point &point);
 
+struct FormationNode
+{
+	Point pos;
+	Point data[11];
+};
+
 // enumerators
 
 // این enum مشخص کننده ی تیم یک بازیکن خواهد بود. TID_TEAMMATE مشخص کننده ی یک بازیکن هم تیمی و TID_OPPONENT مشخص کننده ی یک بازیکن حریف و TID_UNKNOWN بیان گر این است که مشخص نیست آن بازیکن برای کدام تیم است.

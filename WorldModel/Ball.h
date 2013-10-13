@@ -100,6 +100,7 @@ public:
 	bool isAbsoluteUpdate() const;
 	bool isUpdateByHearPermitted() const;
 	bool isUpdatedByHear() const;
+	bool isOut(float margin=1) const;
 
 // خروجی این تابع مشخص می کند که اطلاعات مربوط به توپ برای چند سایکل قبل است.
 	unsigned getSimCounter() const;
@@ -110,6 +111,7 @@ public:
 	float getStoppedBallVel() const;
 
 	float getTacklePowerRate() const;
+	float getEffectiveKickPower(const Body &body) const;
 
 	unsigned getLatestSeeTime() const;
 	Vector getSeenPos() const;

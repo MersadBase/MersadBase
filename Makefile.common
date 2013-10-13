@@ -22,7 +22,7 @@ SHELL = /bin/sh
 CC=gcc
 CXX=g++
 
-CXXFLAGS = -O2 -pipe -Wall -g -I. \
+CXXFLAGS = -pipe -Wall -g -I. \
 						$(foreach DEPLIB,$(DEPLIBS),-I$(TOPDIR)/$(DEPLIB)) \
 						$(foreach LOGLEVEL,$(LOGLEVELS),-D$(LOGLEVEL))
 

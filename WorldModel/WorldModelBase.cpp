@@ -398,6 +398,8 @@ void WorldModelBase::parseLine(const SExpression &exp)
 
 void WorldModelBase::parseBall(const SExpression &exp)
 {
+	if(getCurCycle()==48)
+		LOG<<"FDS"<<endl;
 	ball->parse(exp, getCurTime());
 }
 

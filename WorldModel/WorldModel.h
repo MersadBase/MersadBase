@@ -47,6 +47,8 @@ public:
 	virtual void updateAfterSenseBody();
 
 	void updateFastIC();
+	float getDangerValue(const Point p)const;
+	float getPointValue(const Point p)const;
 	const FastIC &getGlobalFastIC() const;
 };
 

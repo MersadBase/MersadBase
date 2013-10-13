@@ -32,6 +32,7 @@
 #define PRECISION 2
 
 #define LOG logger["MainLog"]
+#define FAKELOG logger["Fake"]
 #define OFFLOG logger["OfflineLog"]
 #define DRAW   logger["DrawLog"]
 

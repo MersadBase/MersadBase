@@ -15,7 +15,7 @@
  *
  *  Released on Wednesday 25 August 2010, 3 Shahrivar 1389 by Mersad RoboCup Team.
  *  For more information please read README file.
-*/
+ */
 
 #ifndef __PLAYER_H
 #define __PLAYER_H
@@ -28,7 +28,6 @@
 #ifndef NULL
 #	define NULL 0
 #endif // NULL
-
 #define APVR_RADIUS 7.5
 #define PLAYER_VALID_CYCLE 6
 #define PLAYER_ALIVE_CYCLE 12
@@ -123,34 +122,31 @@ public:
 	void virtualUpdate(const Body &body);
 
 // این تابع بازیکن را یک Cycle شبیه سازی می کند. مثلا می خواهید بدانید بازیکن در Cycle بعدی کجا قرار دارد باید بنویسید:
-/*	player.simulateByDynamics(body);
- 	Point nextPlayerPos = player.getPos();
-*/
+	/*	player.simulateByDynamics(body);
+	 Point nextPlayerPos = player.getPos();
+	 */
 	void simulateByDynamics(const Body &body);
 
 // این تابع بازیکن را با یک Command شبیه سازی می کند. مثلا اگر می خواهید بدانید بازیکن بر اثر یک حرکت مستقیم در لحظه ی بعدی کجاست باید کد زیر را بنویسید:
-/*	Command* dash = new DashCommand(100, 10);
-	player.simulateByAction(worldModel->getBody(), dash);
-	player.simulateByDynamics(worldModel->getBody());
-	Point nextPlayerPos = player.getPos();
-*/
+	/*	Command* dash = new DashCommand(100, 10);
+	 player.simulateByAction(worldModel->getBody(), dash);
+	 player.simulateByDynamics(worldModel->getBody());
+	 Point nextPlayerPos = player.getPos();
+	 */
 	void simulateByAction(const Command *bodyCycleCommand, bool realBody = false);
 
 	void update(const Body &body, PlayMode playMode = PM_PLAY_ON);
-	void parse(TeamId teamIdArg, unsigned uniNumArg, bool isGoalie,
+	void parse(TeamId teamIdArg, unsigned uniNumArg, bool isGoalie, const SExpression &exp,
+			unsigned curTime);
+	void parseFullState(TeamId teamIdArg, unsigned uniNumArg, bool isGoalieArg,
 			const SExpression &exp, unsigned curTime);
-	void parseFullState(TeamId teamIdArg, unsigned uniNumArg,
-			bool isGoalieArg, const SExpression &exp, unsigned curTime);
-	void updateByHear(float x, float y, float velMag, float velDir,
-			const Body &body);
-	void updateByRadar(float magnitude, float direction,
-			const Body &body, const Ball &ball);
+	void updateByHear(float x, float y, float velMag, float velDir, const Body &body);
+	void updateByRadar(float magnitude, float direction, const Body &body, const Ball &ball);
 
 	virtual void setServerParamVars(const Param &serverParam);
 
 // مشخص می کند که این نمونه از Player از نوع Body هست یا نه.
 	bool isBody() const;
-
 
 	bool canBodySee(const Vector &playerPos, float viewAngle, float visibleDist) const;
 	void setByAnotherPlayer(const Player &player, const Body &body);
@@ -159,6 +155,7 @@ public:
 
 // این تابع مشخص می کند که اطلاعات مربوط به Player معتبر هستند یا نه. مثلا اگر آخرین اطلاعات از بازیکن را بیش از ۶ سایکل قبل گرفته باشیم این تابع false بر می گرداند که بیان گر این است که اطلاعات مربوط به بازیکن در این لحظه معتبر نیست.
 	bool isValid() const;
+	bool isValid(unsigned validCycle) const;
 
 	static unsigned uniNumToPostNum(unsigned uniNum);
 	static unsigned postNumToUniNum(unsigned postNum);

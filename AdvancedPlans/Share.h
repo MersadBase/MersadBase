@@ -23,12 +23,20 @@
 #include <CoachWorldModel.h>
 #include <string>
 #include <vector>
+#include <ChainAction.h>
 
 struct Share
 {
+	static vector<ChainAction> chain;
+
+	static ViewModeWidth lastVMW;
+
+	static unsigned lastPass;
 	static int lastSRPShootCycle;
 	static int lastKickableCycle;
 	static bool lastCycleViewChanged;
+
+	static KickEntry lastKick;
 };
 
 #endif // __SHARE_H_

@@ -138,31 +138,14 @@ SayDecisionForm::SayDecisionForm()
 	reset();
 }
 
+void SayDecisionForm::addSay(SayType st)
+{
+	says.push_back(st);
+}
+
 void SayDecisionForm::reset()
 {
-	defenseSay = false;
-	defenseStr = "";
-
-	dfbSystem = false;
-	dfbStatus = 0;
-
-	passSay = false;
-	doRoutinSay = false;
-	beforePassSay = false;
-	suggestPassSay = false;
-	planSay = false;
-	freeKickSay = false;
-	planHeader = "";
-
-	passNum = 12;
-	interceptNum = 0;
-	attentionNum = 0;
-	planStatus = 0;
-	gwInterceptNum = 0;
-	gwAttentionNum = 0;
-
-	planSay = false;
-	radarSay = false;
+	says.clear();
 }
 
 // HeadDecisionForm functions

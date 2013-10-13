@@ -494,7 +494,7 @@ void SyncedAgent::logEndInf()
 
 ViewModeWidth SyncedAgent::getSyncedWide() const
 {
-	return VMW_NARROW;
+	return VMW_WIDE;
 }
 
 ViewModeWidth SyncedAgent::getSyncedNormal() const

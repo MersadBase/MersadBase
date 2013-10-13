@@ -15,7 +15,7 @@
  *
  *  Released on Monday 13 September 2010, 22 Shahrivar 1389 by Mersad RoboCup Team.
  *  For more information please read README file.
-*/
+ */
 
 #include <cmath>
 #include <Logger.h>
@@ -23,6 +23,7 @@
 #include <Degree.h>
 #include <Defines.h>
 #include <WorldModelUtilities.h>
+#include <Rectangle.h>
 
 #define OPP_OFFLINE_LOCAL_X 20
 #define OPP_OFFLINE_LOCAL_Y 10
@@ -34,14 +35,17 @@ using namespace Degree;
 Formation WorldModelUtilities::formation("");
 Formation WorldModelUtilities::beforeKickOffFormation("");
 Formation WorldModelUtilities::nonPlayOnFormation("");
+TriFormation WorldModelUtilities::playOnFormation("");
+TriFormation WorldModelUtilities::kickInFormation("");
+StaticFormation WorldModelUtilities::staticFormation("");
 bool WorldModelUtilities::formationSet(false);
 
 int WorldModelUtilities::checkPlayModeForPenalty() const
 {
 	if (virtualPlayMode == VPM_PENALTY_ON_FIELD)
-		return 1;// Rotate Field Flags
+		return 1; // Rotate Field Flags
 	if (virtualPlayMode == VPM_PENALTY_ON_FIELD_OPP)
-		return 2;// Rotate Field Flags ONLY for goalie
+		return 2; // Rotate Field Flags ONLY for goalie
 
 	return 0;
 }
@@ -62,13 +66,11 @@ float WorldModelUtilities::getTackleProb(bool foul) const
 		tackleDist = getServerParam()["tackle_back_dist"].asFloat();
 
 	if (tackleDist > 1.0e-5)
-		failTackleProb = pow(abs(playerAndBall.getX()) / tackleDist,
-		exponent) +
-		pow(abs(playerAndBall.getY()) /
-		getServerParam()["tackle_width"].asFloat(),
-		exponent);
+		failTackleProb = pow(abs(playerAndBall.getX()) / tackleDist, exponent)
+				+ pow(abs(playerAndBall.getY()) / getServerParam()["tackle_width"].asFloat(),
+						exponent);
 
-	if ( failTackleProb < 1 )
+	if (failTackleProb < 1)
 		succTackleProb = 1 - failTackleProb;
 	return succTackleProb;
 }
@@ -89,13 +91,11 @@ float WorldModelUtilities::getTackleProb(const Ball &theBall, const Body &body, 
 		tackleDist = getServerParam()["tackle_back_dist"].asFloat();
 
 	if (tackleDist > 1.0e-5)
-		failTackleProb = pow(abs(playerAndBall.getX()) / tackleDist,
-		exponent) +
-		pow(abs(playerAndBall.getY()) /
-		getServerParam()["tackle_width"].asFloat(),
-		exponent);
+		failTackleProb = pow(abs(playerAndBall.getX()) / tackleDist, exponent)
+				+ pow(abs(playerAndBall.getY()) / getServerParam()["tackle_width"].asFloat(),
+						exponent);
 
-	if ( failTackleProb < 1 )
+	if (failTackleProb < 1)
 		succTackleProb = 1 - failTackleProb;
 	return succTackleProb;
 }
@@ -116,23 +116,23 @@ float WorldModelUtilities::getTackleProb(const Ball &theBall, const Player *play
 		tackleDist = getServerParam()["tackle_back_dist"].asFloat();
 
 	if (tackleDist > 1.0e-5)
-		failTackleProb = pow(abs(playerAndBall.getX()) / tackleDist,
-		exponent) +
-		pow(abs(playerAndBall.getY()) /
-		getServerParam()["tackle_width"].asFloat(),
-		exponent);
+		failTackleProb = pow(abs(playerAndBall.getX()) / tackleDist, exponent)
+				+ pow(abs(playerAndBall.getY()) / getServerParam()["tackle_width"].asFloat(),
+						exponent);
 
-	if ( failTackleProb < 1 )
+	if (failTackleProb < 1)
 		succTackleProb = 1 - failTackleProb;
 	return succTackleProb;
 }
 
-bool WorldModelUtilities::isBallKickable() const
+float WorldModelUtilities::getKickableArea() const
 {
-	float kickableArea;
-	kickableArea = getBall().getSize() + getBody().getKickableMargin() + getBody().getSize() - 0.055;
+	return (getBall().getSize() + getBody().getKickableMargin() + getBody().getSize() - 0.055);
+}
 
-	if (getBall().getAbsVec().getMagnitude() <= kickableArea)
+bool WorldModelUtilities::isBallKickable(float extraKickable) const
+{
+	if (getBall().getAbsVec().getMagnitude() <= getKickableArea() + extraKickable)
 		return true;
 	return false;
 }
@@ -140,8 +140,8 @@ bool WorldModelUtilities::isBallKickable() const
 bool WorldModelUtilities::isBallKickable(const Ball &theBall) const
 {
 	float kickableArea;
-	kickableArea = getBall().getSize() + getBody().getKickableMargin() +
-		getBody().getSize() - 0.055;
+	kickableArea = getBall().getSize() + getBody().getKickableMargin() + getBody().getSize()
+			- 0.055;
 
 	if (theBall.getAbsVec().getMagnitude() <= kickableArea)
 		return true;
@@ -150,7 +150,9 @@ bool WorldModelUtilities::isBallKickable(const Ball &theBall) const
 
 bool WorldModelUtilities::isBallCatchable() const
 {
-	float catchableArea = std::sqrt( std::pow( serverParam["catchable_area_w"].asFloat() * 0.5, 2.0 ) + std::pow( serverParam["catchable_area_l"].asFloat(), 2.0 ) );
+	float catchableArea = std::sqrt(
+			std::pow(serverParam["catchable_area_w"].asFloat() * 0.5, 2.0)
+					+ std::pow(serverParam["catchable_area_l"].asFloat(), 2.0));
 
 	if (getBall().getAbsVec().getMagnitude() < catchableArea)
 		return true;
@@ -159,7 +161,9 @@ bool WorldModelUtilities::isBallCatchable() const
 
 bool WorldModelUtilities::isBallCatchable(const Ball &theBall) const
 {
-	float catchableArea = std::sqrt( std::pow( serverParam["catchable_area_w"].asFloat() * 0.5, 2.0 ) + std::pow( serverParam["catchable_area_l"].asFloat(), 2.0 ) );
+	float catchableArea = std::sqrt(
+			std::pow(serverParam["catchable_area_w"].asFloat() * 0.5, 2.0)
+					+ std::pow(serverParam["catchable_area_l"].asFloat(), 2.0));
 
 	if (theBall.getAbsVec().getMagnitude() < catchableArea)
 		return true;
@@ -168,26 +172,30 @@ bool WorldModelUtilities::isBallCatchable(const Ball &theBall) const
 
 float WorldModelUtilities::getCatchProbability() const
 {
-	float catchableArea = std::sqrt( std::pow( serverParam["catchable_area_w"].asFloat() * 0.5, 2.0 ) + std::pow( serverParam["catchable_area_l"].asFloat(), 2.0 ) );
+	float catchableArea = std::sqrt(
+			std::pow(serverParam["catchable_area_w"].asFloat() * 0.5, 2.0)
+					+ std::pow(serverParam["catchable_area_l"].asFloat(), 2.0));
 	float catch_prob = serverParam["catch_probability"].asFloat();
 	float ballDist = getBall().getPos().getDistance(getBody().getPos());
-	float stretch_l = serverParam["catchable_area_l"].asFloat() * getPlayerType(getBody().getUniNum())["catchable_area_l_stretch"].asFloat();
-	float stretch_area = std::sqrt( std::pow( serverParam["catchable_area_w"].asFloat() * 0.5, 2 )
-                                                   + std::pow( stretch_l, 2 ) );
+	float stretch_l = serverParam["catchable_area_l"].asFloat()
+			* getPlayerType(getBody().getUniNum())["catchable_area_l_stretch"].asFloat();
+	float stretch_area = std::sqrt(
+			std::pow(serverParam["catchable_area_w"].asFloat() * 0.5, 2) + std::pow(stretch_l, 2));
 
 	LOG << "my stretch_area : " << stretch_area << endl;
 
-	if ( ballDist > stretch_area )
+	if (ballDist > stretch_area)
 	{
 		return 0.0;
 	}
 
-	if ( ballDist > catchableArea )
+	if (ballDist > catchableArea)
 	{
-		float x = ballDist * ( stretch_l / stretch_area );
+		float x = ballDist * (stretch_l / stretch_area);
 		catch_prob = serverParam["catch_probability"].asFloat()
-				- serverParam["catch_probability"].asFloat() * ( ( x - serverParam["catchable_area_l"].asFloat() )
-				/ ( stretch_l - serverParam["catchable_area_l"].asFloat() ) );
+				- serverParam["catch_probability"].asFloat()
+						* ((x - serverParam["catchable_area_l"].asFloat())
+								/ (stretch_l - serverParam["catchable_area_l"].asFloat()));
 	}
 	return catch_prob;
 }
@@ -196,21 +204,20 @@ bool WorldModelUtilities::isBallInTmmKickable() const
 {
 	register int i;
 	float kickableArea;
-	kickableArea = getBall().getSize() +
-		getBody().getSize();
+	kickableArea = getBall().getSize() + getBody().getSize();
 
 	for (i = 0; i < FULL_PLAYERS_NUM; i++)
 		if (getFullPlayer(TID_TEAMMATE, i).isValid())
-			if(!getFullPlayer(TID_TEAMMATE, i).isBody())
-				if(getFullPlayer(TID_TEAMMATE, i).getDistance(getBall())
-				   <=	kickableArea + getFullPlayer(TID_TEAMMATE, i).getKickableMargin())
+			if (!getFullPlayer(TID_TEAMMATE, i).isBody())
+				if (getFullPlayer(TID_TEAMMATE, i).getDistance(getBall())
+						<= kickableArea + getFullPlayer(TID_TEAMMATE, i).getKickableMargin())
 					return true;
 
 	for (i = 0; i < HALF_PLAYERS_NUM; i++)
 		if (getHalfPlayer(TID_TEAMMATE, i).isValid())
-			if(!getHalfPlayer(TID_TEAMMATE, i).isBody())
-				if(getHalfPlayer(TID_TEAMMATE, i).getDistance(getBall())
-				   <=	kickableArea + getHalfPlayer(TID_TEAMMATE, i).getKickableMargin())
+			if (!getHalfPlayer(TID_TEAMMATE, i).isBody())
+				if (getHalfPlayer(TID_TEAMMATE, i).getDistance(getBall())
+						<= kickableArea + getHalfPlayer(TID_TEAMMATE, i).getKickableMargin())
 					return true;
 
 	return false;
@@ -220,21 +227,20 @@ bool WorldModelUtilities::isBallInTmmKickable(const Ball &theBall) const
 {
 	register int i;
 	float kickableArea;
-	kickableArea = getBall().getSize() +
-		getBody().getSize();
+	kickableArea = getBall().getSize() + getBody().getSize();
 
 	for (i = 0; i < FULL_PLAYERS_NUM; i++)
 		if (getFullPlayer(TID_TEAMMATE, i).isValid())
-			if(!getFullPlayer(TID_TEAMMATE, i).isBody())
-				if(getFullPlayer(TID_TEAMMATE, i).getDistance(theBall)
-				   <=	kickableArea + getFullPlayer(TID_TEAMMATE, i).getKickableMargin())
+			if (!getFullPlayer(TID_TEAMMATE, i).isBody())
+				if (getFullPlayer(TID_TEAMMATE, i).getDistance(theBall)
+						<= kickableArea + getFullPlayer(TID_TEAMMATE, i).getKickableMargin())
 					return true;
 
 	for (i = 0; i < HALF_PLAYERS_NUM; i++)
 		if (getHalfPlayer(TID_TEAMMATE, i).isValid())
-			if(!getHalfPlayer(TID_TEAMMATE, i).isBody())
-				if(getHalfPlayer(TID_TEAMMATE, i).getDistance(theBall)
-				   <=	kickableArea + getHalfPlayer(TID_TEAMMATE, i).getKickableMargin())
+			if (!getHalfPlayer(TID_TEAMMATE, i).isBody())
+				if (getHalfPlayer(TID_TEAMMATE, i).getDistance(theBall)
+						<= kickableArea + getHalfPlayer(TID_TEAMMATE, i).getKickableMargin())
 					return true;
 
 	return false;
@@ -244,19 +250,18 @@ bool WorldModelUtilities::isBallInOppKickable() const
 {
 	register int i;
 	float kickableArea;
-	kickableArea = getBall().getSize() +
-		getBody().getSize();
+	kickableArea = getBall().getSize() + getBody().getSize();
 
 	for (i = 0; i < FULL_PLAYERS_NUM; i++)
 		if (getFullPlayer(TID_OPPONENT, i).isValid())
-			if(getFullPlayer(TID_OPPONENT, i).getDistance(getBall())
-			   <=	kickableArea + getFullPlayer(TID_OPPONENT, i).getKickableMargin())
+			if (getFullPlayer(TID_OPPONENT, i).getDistance(getBall())
+					<= kickableArea + getFullPlayer(TID_OPPONENT, i).getKickableMargin())
 				return true;
 
 	for (i = 0; i < HALF_PLAYERS_NUM; i++)
-		if (getHalfPlayer(TID_OPPONENT,i).isValid())
-			if(getHalfPlayer(TID_OPPONENT,i).getDistance(getBall())
-			   <=	kickableArea + getHalfPlayer(TID_OPPONENT, i).getKickableMargin())
+		if (getHalfPlayer(TID_OPPONENT, i).isValid())
+			if (getHalfPlayer(TID_OPPONENT, i).getDistance(getBall())
+					<= kickableArea + getHalfPlayer(TID_OPPONENT, i).getKickableMargin())
 				return true;
 
 	return false;
@@ -266,19 +271,18 @@ bool WorldModelUtilities::isBallInOppKickable(const Ball &theBall) const
 {
 	register int i;
 	float kickableArea;
-	kickableArea = getBall().getSize() +
-		getBody().getSize();
+	kickableArea = getBall().getSize() + getBody().getSize();
 
 	for (i = 0; i < FULL_PLAYERS_NUM; i++)
 		if (getFullPlayer(TID_OPPONENT, i).isValid())
-			if(getFullPlayer(TID_OPPONENT, i).getDistance(theBall)
-			   <=	kickableArea + getFullPlayer(TID_OPPONENT, i).getKickableMargin())
+			if (getFullPlayer(TID_OPPONENT, i).getDistance(theBall)
+					<= kickableArea + getFullPlayer(TID_OPPONENT, i).getKickableMargin())
 				return true;
 
 	for (i = 0; i < HALF_PLAYERS_NUM; i++)
-		if (getHalfPlayer(TID_OPPONENT,i).isValid())
-			if(getHalfPlayer(TID_OPPONENT,i).getDistance(theBall)
-			   <=	kickableArea + getHalfPlayer(TID_OPPONENT, i).getKickableMargin())
+		if (getHalfPlayer(TID_OPPONENT, i).isValid())
+			if (getHalfPlayer(TID_OPPONENT, i).getDistance(theBall)
+					<= kickableArea + getHalfPlayer(TID_OPPONENT, i).getKickableMargin())
 				return true;
 
 	return false;
@@ -286,20 +290,16 @@ bool WorldModelUtilities::isBallInOppKickable(const Ball &theBall) const
 
 bool WorldModelUtilities::isBallInField() const
 {
-	if (getBall().getPos().getX() < 52.5 + 0.5 &&
-		getBall().getPos().getX() > -52.5 - 0.5 &&
-		getBall().getPos().getY() < 34 + 0.5 &&
-		getBall().getPos().getY() > -34 - 0.5)
+	if (getBall().getPos().getX() < 52.5 + 0.5 && getBall().getPos().getX() > -52.5 - 0.5
+			&& getBall().getPos().getY() < 34 + 0.5 && getBall().getPos().getY() > -34 - 0.5)
 		return true;
 	return false;
 }
 
 bool WorldModelUtilities::isBallInField(const Ball &theBall)
 {
-	if (theBall.getPos().getX() < 52.5 + 0.5 &&
-		theBall.getPos().getX() > -52.5 - 0.5 &&
-		theBall.getPos().getY() < 34 + 0.5 &&
-		theBall.getPos().getY() > -34 - 0.5)
+	if (theBall.getPos().getX() < 52.5 + 0.5 && theBall.getPos().getX() > -52.5 - 0.5
+			&& theBall.getPos().getY() < 34 + 0.5 && theBall.getPos().getY() > -34 - 0.5)
 		return true;
 	return false;
 }
@@ -361,7 +361,7 @@ bool WorldModelUtilities::isOppBallShooted(const Ball &theBall) const
 }
 
 bool WorldModelUtilities::isOppBallShootedToTir(const Ball &theBall, float upYTirPoint,
-									   float downYTirPoint, Point &shootIntercept) const
+		float downYTirPoint, Point &shootIntercept) const
 {
 	Point interceptGoalLine, interceptGoal;
 
@@ -380,14 +380,13 @@ bool WorldModelUtilities::isOppBallShootedToTir(const Ball &theBall, float upYTi
 	interceptGoal.x = theBall.getPos().getX() + deltaX2;
 	interceptGoal.y = theBall.getPos().getY() + deltaY2;
 
-
 	if (interceptGoal.y < (downYTirPoint - 1) || interceptGoal.y > (upYTirPoint + 1))
 		return 0;
 
 	Ball simBall;
 	simBall = theBall;
 
-	while(simBall.getVel().getMagnitude() > .4)
+	while (simBall.getVel().getMagnitude() > .4)
 		simBall.simulateByDynamics(getBody());
 
 	float standardX = -51.5;
@@ -403,6 +402,21 @@ bool WorldModelUtilities::isOppBallShootedToTir(const Ball &theBall, float upYTi
 	return 0;
 }
 
+bool WorldModelUtilities::isPointInField(Point p, float margin) const
+{
+	return Rectangle(-52.5 - margin, -34 - margin, 52.5 + margin, 34 + margin).isInRectangle(p);
+}
+
+bool WorldModelUtilities::isPointInOurDangerArea(Point p) const
+{
+	return (Rectangle(-52.5, 20.f, -36.f, -20.f).isInRectangle(p));
+}
+
+bool WorldModelUtilities::isPointInOppDangerArea(Point p, float margin) const
+{
+	return (Rectangle(36.f - margin, 20.f + margin, 52.5 + margin, -20.f - margin).isInRectangle(p));
+}
+
 const Player &WorldModelUtilities::getNearestTmmToPoint(const Point & point, bool checkMe) const
 {
 	const Player *player = NULL;
@@ -410,7 +424,8 @@ const Player &WorldModelUtilities::getNearestTmmToPoint(const Point & point, boo
 	for (unsigned i = 0; i < FULL_PLAYERS_NUM; i++)
 		if (getFullPlayer(TID_TEAMMATE, i).isValid())
 		{
-			if (getFullPlayer(TID_TEAMMATE, i).getUniNum() == getBody().getUniNum() and checkMe == false)
+			if (getFullPlayer(TID_TEAMMATE, i).getUniNum() == getBody().getUniNum()
+					and checkMe == false)
 				continue;
 			if (!nearestPlayerIsValid)
 			{
@@ -437,17 +452,20 @@ const Player &WorldModelUtilities::getNearestTmmToPoint(const Point & point, boo
 	return tmpPlayer;
 }
 
-const Player *WorldModelUtilities::getNearestTmmToPointFromList(const Point & point, const std::string& players) const
+const Player *WorldModelUtilities::getNearestTmmToPointFromList(const Point & point,
+		const std::string& players) const
 {
 	int nearestPlayer = -1;
 
 	for (int i = 0; i < FULL_PLAYERS_NUM; i++)
-		if (getFullPlayer(TID_TEAMMATE, i).isValid() and isInPlayers(getFullPlayer(TID_TEAMMATE, i).getUniNum(), players))
+		if (getFullPlayer(TID_TEAMMATE, i).isValid()
+				and isInPlayers(getFullPlayer(TID_TEAMMATE, i).getUniNum(), players))
 		{
 			if (nearestPlayer == -1)
 				nearestPlayer = i;
-			else if (point.getDistance(getFullPlayer(TID_TEAMMATE, i).getPos().asPoint()) <
-                                 point.getDistance(getFullPlayer(TID_TEAMMATE, nearestPlayer).getPos().asPoint()))
+			else if (point.getDistance(getFullPlayer(TID_TEAMMATE, i).getPos().asPoint())
+					< point.getDistance(
+							getFullPlayer(TID_TEAMMATE, nearestPlayer).getPos().asPoint()))
 				nearestPlayer = i;
 		}
 
@@ -457,17 +475,20 @@ const Player *WorldModelUtilities::getNearestTmmToPointFromList(const Point & po
 		return fullPlayers[TID_TEAMMATE][nearestPlayer];
 }
 
-const Player *WorldModelUtilities::getNearestOppToPointFromNotList(const Point & point, const std::string& blackPlayers) const
+const Player *WorldModelUtilities::getNearestOppToPointFromNotList(const Point & point,
+		const std::string& blackPlayers) const
 {
 	int nearestPlayer = -1;
 
 	for (int i = 0; i < FULL_PLAYERS_NUM; i++)
-		if (getFullPlayer(TID_OPPONENT, i).isValid() and !isInPlayers(getFullPlayer(TID_OPPONENT, i).getUniNum(), blackPlayers))
+		if (getFullPlayer(TID_OPPONENT, i).isValid()
+				and !isInPlayers(getFullPlayer(TID_OPPONENT, i).getUniNum(), blackPlayers))
 		{
 			if (nearestPlayer == -1)
 				nearestPlayer = i;
-			else if (point.getDistance(getFullPlayer(TID_OPPONENT, i).getPos().asPoint()) <
-					point.getDistance(getFullPlayer(TID_OPPONENT, nearestPlayer).getPos().asPoint()))
+			else if (point.getDistance(getFullPlayer(TID_OPPONENT, i).getPos().asPoint())
+					< point.getDistance(
+							getFullPlayer(TID_OPPONENT, nearestPlayer).getPos().asPoint()))
 				nearestPlayer = i;
 		}
 
@@ -477,17 +498,20 @@ const Player *WorldModelUtilities::getNearestOppToPointFromNotList(const Point &
 		return fullPlayers[TID_OPPONENT][nearestPlayer];
 }
 
-const Player *WorldModelUtilities::getNearestTmmToPointFromNotList(const Point & point, const std::string& blackPlayers) const
+const Player *WorldModelUtilities::getNearestTmmToPointFromNotList(const Point & point,
+		const std::string& blackPlayers) const
 {
 	int nearestPlayer = -1;
 
 	for (int i = 0; i < FULL_PLAYERS_NUM; i++)
-		if (getFullPlayer(TID_TEAMMATE, i).isValid() and !isInPlayers(getFullPlayer(TID_TEAMMATE, i).getUniNum(), blackPlayers))
+		if (getFullPlayer(TID_TEAMMATE, i).isValid()
+				and !isInPlayers(getFullPlayer(TID_TEAMMATE, i).getUniNum(), blackPlayers))
 		{
 			if (nearestPlayer == -1)
 				nearestPlayer = i;
-			else if (point.getDistance(getFullPlayer(TID_TEAMMATE, i).getPos().asPoint()) <
-					point.getDistance(getFullPlayer(TID_TEAMMATE, nearestPlayer).getPos().asPoint()))
+			else if (point.getDistance(getFullPlayer(TID_TEAMMATE, i).getPos().asPoint())
+					< point.getDistance(
+							getFullPlayer(TID_TEAMMATE, nearestPlayer).getPos().asPoint()))
 				nearestPlayer = i;
 		}
 
@@ -497,14 +521,16 @@ const Player *WorldModelUtilities::getNearestTmmToPointFromNotList(const Point &
 		return fullPlayers[TID_TEAMMATE][nearestPlayer];
 }
 
-const Player *WorldModelUtilities::getNearestPlayerToPointFromNotList(const Point & point, const std::string& blackTeammates, const std::string& blackOpponents) const
+const Player *WorldModelUtilities::getNearestPlayerToPointFromNotList(const Point & point,
+		const std::string& blackTeammates, const std::string& blackOpponents) const
 {
 	int nearestPlayer = -1;
 	TeamId nearestPlayerTeam;
 	float minDist = 999.f;
 
 	for (int i = 0; i < FULL_PLAYERS_NUM; i++)
-		if (getFullPlayer(TID_TEAMMATE, i).isValid() and !isInPlayers(getFullPlayer(TID_TEAMMATE, i).getUniNum(), blackTeammates))
+		if (getFullPlayer(TID_TEAMMATE, i).isValid()
+				and !isInPlayers(getFullPlayer(TID_TEAMMATE, i).getUniNum(), blackTeammates))
 		{
 			if (point.getDistance(getFullPlayer(TID_TEAMMATE, i).getPos().asPoint()) < minDist)
 			{
@@ -515,7 +541,8 @@ const Player *WorldModelUtilities::getNearestPlayerToPointFromNotList(const Poin
 		}
 
 	for (int i = 0; i < FULL_PLAYERS_NUM; i++)
-		if (getFullPlayer(TID_OPPONENT, i).isValid() and !isInPlayers(getFullPlayer(TID_OPPONENT, i).getUniNum(), blackOpponents))
+		if (getFullPlayer(TID_OPPONENT, i).isValid()
+				and !isInPlayers(getFullPlayer(TID_OPPONENT, i).getUniNum(), blackOpponents))
 		{
 			if (point.getDistance(getFullPlayer(TID_OPPONENT, i).getPos().asPoint()) < minDist)
 			{
@@ -601,6 +628,21 @@ const Formation& WorldModelUtilities::getNonPlayOnFormation() const
 	return const_cast<const Formation&>(nonPlayOnFormation);
 }
 
+const TriFormation& WorldModelUtilities::getPlayOnFormation() const
+{
+	return playOnFormation;
+}
+
+const TriFormation& WorldModelUtilities::getKickInFormation() const
+{
+	return kickInFormation;
+}
+
+const StaticFormation& WorldModelUtilities::getStaticFormation() const
+{
+	return staticFormation;
+}
+
 float WorldModelUtilities::getTmmDefenseLine() const
 {
 	float min = 0xFFFF;
@@ -620,13 +662,14 @@ float WorldModelUtilities::getTmmDefenseLine() const
 float WorldModelUtilities::getOppOffsideLine(bool isBallFlag) const
 {
 	float offsideLine = -0xFFFF;
-	bool goalieFound = false;//, firstHalf = true;
+	bool goalieFound = false; //, firstHalf = true;
 
 	for (unsigned int i = 0; i < FULL_PLAYERS_NUM; i++)
 	{
 		if (getFullPlayer(TID_OPPONENT, i).isValid() and getFullPlayer(TID_OPPONENT, i).isGoalie())
 			goalieFound = true;
-		if (getFullPlayer(TID_OPPONENT, i).isValid() and not getFullPlayer(TID_OPPONENT, i).isGoalie()
+		if (getFullPlayer(TID_OPPONENT, i).isValid()
+				and not getFullPlayer(TID_OPPONENT, i).isGoalie()
 				and getFullPlayer(TID_OPPONENT, i).getPos().getX() > offsideLine)
 		{
 			offsideLine = getFullPlayer(TID_OPPONENT, i).getPos().getX();
@@ -636,54 +679,54 @@ float WorldModelUtilities::getOppOffsideLine(bool isBallFlag) const
 
 	float halfMin = offsideLine;
 	for (unsigned int i = 0; i < HALF_PLAYERS_NUM; i++)
-		if (getHalfPlayer(TID_OPPONENT, i).isValid() and not getHalfPlayer(TID_OPPONENT, i).isGoalie()
+		if (getHalfPlayer(TID_OPPONENT, i).isValid()
+				and not getHalfPlayer(TID_OPPONENT, i).isGoalie()
 				and getHalfPlayer(TID_OPPONENT, i).getPos().getX() > offsideLine)
-	{
+		{
 			/*if ((not goalieFound) and firstHalf)
-				firstHalf = false;
-			else*/
+			 firstHalf = false;
+			 else*/
 			if (not goalieFound)
 			{
 				offsideLine = halfMin;
 				halfMin = getHalfPlayer(TID_OPPONENT, i).getPos().getX();
 				LOG << "#Half Player " << i + 1 << " => Stored Value = " << halfMin
-				    << " Offside Line = " << offsideLine << endl;
+						<< " Offside Line = " << offsideLine << endl;
 			}
 			else
 			{
 				offsideLine = getHalfPlayer(TID_OPPONENT, i).getPos().getX();
 				LOG << "Half Player " << i + 1 << " => " << offsideLine << endl;
 			}
-	}
+		}
 
 	////
 	/*unsigned maxSimCounter = 0;
-	for (unsigned int i = 0; i < FULL_PLAYERS_NUM; i++)
-	{
-		if (getFullPlayer(TID_OPPONENT, i).isValid() and (not getFullPlayer(TID_OPPONENT, i).isGoalie())
-			and offsideLine - getFullPlayer(TID_OPPONENT, i).getPos().getX() < 7)
-		{
-			if (maxSimCounter < getFullPlayer(TID_OPPONENT, i).getSimCounter())
-				maxSimCounter = getFullPlayer(TID_OPPONENT, i).getSimCounter();
-		}
-	}
-	for (unsigned int i = 0; i < HALF_PLAYERS_NUM; i++)
-	{
-		if (getHalfPlayer(TID_OPPONENT, i).isValid() and (not getHalfPlayer(TID_OPPONENT, i).isGoalie())
-			and offsideLine - getHalfPlayer(TID_OPPONENT, i).getPos().getX() < 7)
-		{
-			if (maxSimCounter < getHalfPlayer(TID_OPPONENT, i).getSimCounter())
-				maxSimCounter = getHalfPlayer(TID_OPPONENT, i).getSimCounter();
-		}
-	}
-	const WorldModelHear * thisHear = dynamic_cast <const WorldModelHear *> (this);
-	if (curCycle - thisHear->getHeardOffsideCycle() < 3 and maxSimCounter > curCycle - thisHear->getHeardOffsideCycle())
-	{
-		LOG << "Change offside line by hear." << offsideLine << " -> " << thisHear->getHeardOffsideLine() << endl;
-		offsideLine = thisHear->getHeardOffsideLine();
-	}*/
+	 for (unsigned int i = 0; i < FULL_PLAYERS_NUM; i++)
+	 {
+	 if (getFullPlayer(TID_OPPONENT, i).isValid() and (not getFullPlayer(TID_OPPONENT, i).isGoalie())
+	 and offsideLine - getFullPlayer(TID_OPPONENT, i).getPos().getX() < 7)
+	 {
+	 if (maxSimCounter < getFullPlayer(TID_OPPONENT, i).getSimCounter())
+	 maxSimCounter = getFullPlayer(TID_OPPONENT, i).getSimCounter();
+	 }
+	 }
+	 for (unsigned int i = 0; i < HALF_PLAYERS_NUM; i++)
+	 {
+	 if (getHalfPlayer(TID_OPPONENT, i).isValid() and (not getHalfPlayer(TID_OPPONENT, i).isGoalie())
+	 and offsideLine - getHalfPlayer(TID_OPPONENT, i).getPos().getX() < 7)
+	 {
+	 if (maxSimCounter < getHalfPlayer(TID_OPPONENT, i).getSimCounter())
+	 maxSimCounter = getHalfPlayer(TID_OPPONENT, i).getSimCounter();
+	 }
+	 }
+	 const WorldModelHear * thisHear = dynamic_cast <const WorldModelHear *> (this);
+	 if (curCycle - thisHear->getHeardOffsideCycle() < 3 and maxSimCounter > curCycle - thisHear->getHeardOffsideCycle())
+	 {
+	 LOG << "Change offside line by hear." << offsideLine << " -> " << thisHear->getHeardOffsideLine() << endl;
+	 offsideLine = thisHear->getHeardOffsideLine();
+	 }*/
 	////
-
 	if (isBallFlag)
 		if (getBall().getPos().getX() > offsideLine)
 		{
@@ -701,17 +744,25 @@ float WorldModelUtilities::getOppLocalOffLine(bool isBallFlag) const
 {
 	float offsideLine = -0xFFFF;
 	for (int i = 0; i < FULL_PLAYERS_NUM; i++)
-		if (getFullPlayer(TID_OPPONENT, i).isValid() and not getFullPlayer(TID_OPPONENT, i).isGoalie() and
-				getFullPlayer(TID_OPPONENT, i).getPos().getX() > offsideLine and
-				(abs(getFullPlayer(TID_OPPONENT, i).getPos().getY() - getBall().getPos().getY()) < OPP_OFFLINE_LOCAL_Y and
-				 abs(getFullPlayer(TID_OPPONENT, i).getPos().getX() - getBall().getPos().getX()) < OPP_OFFLINE_LOCAL_X))
+		if (getFullPlayer(TID_OPPONENT, i).isValid()
+				and not getFullPlayer(TID_OPPONENT, i).isGoalie()
+				and getFullPlayer(TID_OPPONENT, i).getPos().getX() > offsideLine
+				and (abs(getFullPlayer(TID_OPPONENT, i).getPos().getY() - getBall().getPos().getY())
+						< OPP_OFFLINE_LOCAL_Y
+						and abs(
+								getFullPlayer(TID_OPPONENT, i).getPos().getX()
+										- getBall().getPos().getX()) < OPP_OFFLINE_LOCAL_X))
 			offsideLine = getFullPlayer(TID_OPPONENT, i).getPos().getX();
 
 	for (int i = 0; i < HALF_PLAYERS_NUM; i++)
-		if (getHalfPlayer(TID_OPPONENT, i).isValid() and not getHalfPlayer(TID_OPPONENT, i).isGoalie()  and
-				getHalfPlayer(TID_OPPONENT, i).getPos().getX() > offsideLine and
-				(abs(getHalfPlayer(TID_OPPONENT, i).getPos().getY() - getBall().getPos().getY()) < OPP_OFFLINE_LOCAL_Y and
-			 	abs(getHalfPlayer(TID_OPPONENT, i).getPos().getX() - getBall().getPos().getX()) < OPP_OFFLINE_LOCAL_X))
+		if (getHalfPlayer(TID_OPPONENT, i).isValid()
+				and not getHalfPlayer(TID_OPPONENT, i).isGoalie()
+				and getHalfPlayer(TID_OPPONENT, i).getPos().getX() > offsideLine
+				and (abs(getHalfPlayer(TID_OPPONENT, i).getPos().getY() - getBall().getPos().getY())
+						< OPP_OFFLINE_LOCAL_Y
+						and abs(
+								getHalfPlayer(TID_OPPONENT, i).getPos().getX()
+										- getBall().getPos().getX()) < OPP_OFFLINE_LOCAL_X))
 			offsideLine = getHalfPlayer(TID_OPPONENT, i).getPos().getX();
 
 	if (isBallFlag)
@@ -729,12 +780,14 @@ float WorldModelUtilities::getTmmOffsideLine(bool isBallFlag) const
 	float offsideLine = 0xFFFF;
 
 	for (unsigned int i = 0; i < FULL_PLAYERS_NUM; i++)
-		if (getFullPlayer(TID_TEAMMATE, i).isValid() and not getFullPlayer(TID_TEAMMATE, i).isGoalie()
+		if (getFullPlayer(TID_TEAMMATE, i).isValid()
+				and not getFullPlayer(TID_TEAMMATE, i).isGoalie()
 				and getFullPlayer(TID_TEAMMATE, i).getPos().getX() < offsideLine)
 			offsideLine = getFullPlayer(TID_TEAMMATE, i).getPos().getX();
 
 	for (unsigned int i = 0; i < HALF_PLAYERS_NUM; i++)
-		if (getHalfPlayer(TID_TEAMMATE, i).isValid() and not getHalfPlayer(TID_TEAMMATE, i).isGoalie()
+		if (getHalfPlayer(TID_TEAMMATE, i).isValid()
+				and not getHalfPlayer(TID_TEAMMATE, i).isGoalie()
 				and getHalfPlayer(TID_TEAMMATE, i).getPos().getX() < offsideLine)
 			offsideLine = getHalfPlayer(TID_TEAMMATE, i).getPos().getX();
 
@@ -753,11 +806,13 @@ int WorldModelUtilities::getOppPlayersBeforeLine(float lineX) const
 	int counter = 0;
 
 	for (int i = 0; i < FULL_PLAYERS_NUM; i++)
-		if (getFullPlayer(TID_OPPONENT, i).isValid() && getFullPlayer(TID_OPPONENT, i).getPos().getX() <= lineX)
+		if (getFullPlayer(TID_OPPONENT, i).isValid()
+				&& getFullPlayer(TID_OPPONENT, i).getPos().getX() <= lineX)
 			counter++;
 
 	for (int i = 0; i < HALF_PLAYERS_NUM; i++)
-		if (getHalfPlayer(TID_OPPONENT,i).isValid() && getHalfPlayer(TID_OPPONENT, i).getPos().getX() <= lineX)
+		if (getHalfPlayer(TID_OPPONENT, i).isValid()
+				&& getHalfPlayer(TID_OPPONENT, i).getPos().getX() <= lineX)
 			counter++;
 
 	return counter;
@@ -771,13 +826,11 @@ int WorldModelUtilities::getOppPlayersBetweenLines(float line1X, float line2X) c
 const Player *WorldModelUtilities::getTmmGoalie() const
 {
 	for (unsigned i = 0; i < FULL_PLAYERS_NUM; i++)
-		if (getFullPlayer(TID_TEAMMATE, i).isValid() &&
-			getFullPlayer(TID_TEAMMATE, i).isGoalie())
+		if (getFullPlayer(TID_TEAMMATE, i).isValid() && getFullPlayer(TID_TEAMMATE, i).isGoalie())
 			return fullPlayers[TID_TEAMMATE][i];
 
 	for (unsigned i = 0; i < HALF_PLAYERS_NUM; i++)
-		if (getHalfPlayer(TID_TEAMMATE, i).isValid() &&
-			getHalfPlayer(TID_TEAMMATE, i).isGoalie())
+		if (getHalfPlayer(TID_TEAMMATE, i).isValid() && getHalfPlayer(TID_TEAMMATE, i).isGoalie())
 			return halfPlayers[TID_TEAMMATE][i];
 
 	return NULL;
@@ -786,33 +839,64 @@ const Player *WorldModelUtilities::getTmmGoalie() const
 const Player *WorldModelUtilities::getOppGoalie() const
 {
 	for (unsigned i = 0; i < FULL_PLAYERS_NUM; i++)
-		if (getFullPlayer(TID_OPPONENT, i).isValid() &&
-			getFullPlayer(TID_OPPONENT, i).isGoalie())
+		if (getFullPlayer(TID_OPPONENT, i).isValid() && getFullPlayer(TID_OPPONENT, i).isGoalie())
 			return fullPlayers[TID_OPPONENT][i];
 
 	for (unsigned i = 0; i < HALF_PLAYERS_NUM; i++)
-		if (getHalfPlayer(TID_OPPONENT, i).isValid() &&
-			getHalfPlayer(TID_OPPONENT, i).isGoalie())
+		if (getHalfPlayer(TID_OPPONENT, i).isValid() && getHalfPlayer(TID_OPPONENT, i).isGoalie())
 			return halfPlayers[TID_OPPONENT][i];
 
 	return NULL;
+}
+
+unsigned WorldModelUtilities::getOppCountInDistanceFromPoint(Point p, float distance) const
+{
+	unsigned count = 0;
+	for (int i = 0; i < FULL_PLAYERS_NUM; i++)
+	{
+		const Player * opp = &getFullPlayer(TID_OPPONENT, i);
+		if ((not opp) or (not opp->isValid()))
+			continue;
+		if (opp->getPos().getDistance(p) <= distance)
+			count++;
+	}
+	for (int i = 0; i < HALF_PLAYERS_NUM; i++)
+	{
+		const Player * opp = &getHalfPlayer(TID_OPPONENT, i);
+		if ((not opp) or (not opp->isValid()))
+			continue;
+		if (opp->getPos().getDistance(p) <= distance)
+			count++;
+	}
+	return count;
+}
+
+unsigned WorldModelUtilities::getUniNum() const
+{
+	return body->getUniNum();
+}
+
+const Vector& WorldModelUtilities::getBallPos() const
+{
+	return ball->getPos();
 }
 
 float WorldModelUtilities::getSecurityStatus(const Player &player, float oval_a, float oval_b) const
 {
 	float securityStatus = 100000;
 	float tmpSecurityStatus = 0;
-	if (!player.isValid()) return 0;
+	if (!player.isValid())
+		return 0;
 	for (unsigned i = 0; i < FULL_PLAYERS_NUM; i++)
 		if (fullPlayers[TID_OPPONENT][i]->isValid())
 		{
-			float oppPlayerX = fullPlayers[TID_OPPONENT][i]->getPos().getX() -
-					player.getPos().getX();
-			float oppPlayerY = fullPlayers[TID_OPPONENT][i]->getPos().getY() -
-					player.getPos().getY();
-			tmpSecurityStatus = abs(2 * oval_b *
-					oppPlayerX * oppPlayerY *	sqrt(abs(
-					1 / (oval_a * oppPlayerY) + 1 / (oval_b * oppPlayerX))));
+			float oppPlayerX = fullPlayers[TID_OPPONENT][i]->getPos().getX()
+					- player.getPos().getX();
+			float oppPlayerY = fullPlayers[TID_OPPONENT][i]->getPos().getY()
+					- player.getPos().getY();
+			tmpSecurityStatus = abs(
+					2 * oval_b * oppPlayerX * oppPlayerY
+							* sqrt(abs(1 / (oval_a * oppPlayerY) + 1 / (oval_b * oppPlayerX))));
 			if (abs(oppPlayerX) < .05)
 				tmpSecurityStatus = abs(2 * (oval_b / oval_a) * oppPlayerY);
 			if (abs(oppPlayerY) < .05)
@@ -824,13 +908,13 @@ float WorldModelUtilities::getSecurityStatus(const Player &player, float oval_a,
 	for (unsigned i = 0; i < HALF_PLAYERS_NUM; i++)
 		if (halfPlayers[TID_OPPONENT][i]->isValid())
 		{
-			float oppPlayerX = halfPlayers[TID_OPPONENT][i]->getPos().getX() -
-					player.getPos().getX();
-			float oppPlayerY = halfPlayers[TID_OPPONENT][i]->getPos().getY() -
-					player.getPos().getY();
-			tmpSecurityStatus = abs(2 * oval_b * oppPlayerX * oppPlayerY *
-					sqrt(1 / (oval_a * oppPlayerY) +
-					1 / (oval_a * oppPlayerX)));
+			float oppPlayerX = halfPlayers[TID_OPPONENT][i]->getPos().getX()
+					- player.getPos().getX();
+			float oppPlayerY = halfPlayers[TID_OPPONENT][i]->getPos().getY()
+					- player.getPos().getY();
+			tmpSecurityStatus = abs(
+					2 * oval_b * oppPlayerX * oppPlayerY
+							* sqrt(1 / (oval_a * oppPlayerY) + 1 / (oval_a * oppPlayerX)));
 			if (abs(oppPlayerX) < .05)
 				tmpSecurityStatus = abs(2 * (oval_b / oval_a) * oppPlayerY);
 			if (abs(oppPlayerY) < .05)
@@ -842,7 +926,8 @@ float WorldModelUtilities::getSecurityStatus(const Player &player, float oval_a,
 	return securityStatus;
 }
 
-float WorldModelUtilities::getPathSecurityStatus(const Player &srcPlayer, const Point trgPoint, float forwardRate) const
+float WorldModelUtilities::getPathSecurityStatus(const Player &srcPlayer, const Point trgPoint,
+		float forwardRate) const
 {
 	float minAngleSecurity = 100000;
 	Vector meToTRGPoint;
@@ -852,19 +937,19 @@ float WorldModelUtilities::getPathSecurityStatus(const Player &srcPlayer, const 
 		if (fullPlayers[TID_OPPONENT][i]->isValid())
 		{
 			Vector meToTmpOpp;
-			meToTmpOpp.setByPoints(srcPlayer.getPos(),
-					fullPlayers[TID_OPPONENT][i]->getPos());
+			meToTmpOpp.setByPoints(srcPlayer.getPos(), fullPlayers[TID_OPPONENT][i]->getPos());
 			if (meToTmpOpp.getMagnitude() <= meToTRGPoint.getMagnitude() + 1)
 			{
-				float tmpAngle = absoluteAngle(abs(trgDirection -
-						absoluteAngle(meToTmpOpp.getDirection())));
+				float tmpAngle = absoluteAngle(
+						abs(trgDirection - absoluteAngle(meToTmpOpp.getDirection())));
 				float tmpAngleSecurity = DEG2RAD * tmpAngle;
-				if ((trgDirection > meToTmpOpp.getDirection() &&
-						normalizeAngle(trgDirection) >= 0) ||
-						(trgDirection < meToTmpOpp.getDirection() &&
-						normalizeAngle(trgDirection) <= 0))
-					tmpAngleSecurity = DEG2RAD * tmpAngle + (forwardRate - 1) *
-							DEG2RAD * tmpAngle * (sin(DEG2RAD * tmpAngle) + 1);
+				if ((trgDirection > meToTmpOpp.getDirection() && normalizeAngle(trgDirection) >= 0)
+						|| (trgDirection < meToTmpOpp.getDirection()
+								&& normalizeAngle(trgDirection) <= 0))
+					tmpAngleSecurity =
+							DEG2RAD * tmpAngle
+									+ (forwardRate - 1) * DEG2RAD * tmpAngle
+											* (sin(DEG2RAD * tmpAngle) + 1);
 				if (tmpAngleSecurity < minAngleSecurity)
 					minAngleSecurity = tmpAngleSecurity;
 			}
@@ -874,18 +959,18 @@ float WorldModelUtilities::getPathSecurityStatus(const Player &srcPlayer, const 
 		if (halfPlayers[TID_OPPONENT][i]->isValid())
 		{
 			Vector meToTmpOpp;
-			meToTmpOpp.setByPoints(srcPlayer.getPos(),
-					halfPlayers[TID_OPPONENT][i]->getPos());
+			meToTmpOpp.setByPoints(srcPlayer.getPos(), halfPlayers[TID_OPPONENT][i]->getPos());
 			if (meToTmpOpp.getMagnitude() >= meToTRGPoint.getMagnitude() + 4)
 			{
 				float tmpAngle = absoluteAngle(trgDirection - meToTmpOpp.getDirection());
 				float tmpAngleSecurity = DEG2RAD * tmpAngle;
-				if ((trgDirection > meToTmpOpp.getDirection() &&
-						normalizeAngle(trgDirection) >= 0) ||
-						(trgDirection < meToTmpOpp.getDirection() &&
-						normalizeAngle(trgDirection) <= 0))
-					tmpAngleSecurity = DEG2RAD * tmpAngle + (forwardRate - 1) *
-							DEG2RAD * tmpAngle * (sin(DEG2RAD * tmpAngle) + 1);
+				if ((trgDirection > meToTmpOpp.getDirection() && normalizeAngle(trgDirection) >= 0)
+						|| (trgDirection < meToTmpOpp.getDirection()
+								&& normalizeAngle(trgDirection) <= 0))
+					tmpAngleSecurity =
+							DEG2RAD * tmpAngle
+									+ (forwardRate - 1) * DEG2RAD * tmpAngle
+											* (sin(DEG2RAD * tmpAngle) + 1);
 				if (tmpAngleSecurity < minAngleSecurity)
 					minAngleSecurity = tmpAngleSecurity;
 			}
@@ -897,13 +982,12 @@ float WorldModelUtilities::getPathSecurityStatus(const Player &srcPlayer, const 
 float WorldModelUtilities::getTackleEffectivePower(float Direction) const
 {
 	float target_rel_angle = Degree::getDeltaAngle(Direction, getBody().getBodyDir());
-	float ball_rel_angle = Degree::getDeltaAngle(Vector(getBall().getPos() - getBody().getPos()).getDirection(), getBody().getBodyDir());
-	double eff_power
-		= MAX_BACK_TACKLE_POWER
-		+ ( ( MAX_TACKLE_POWER - MAX_BACK_TACKLE_POWER )
-		* ( 1.0 - fabs(target_rel_angle) / 180.0 ) );
+	float ball_rel_angle = Degree::getDeltaAngle(
+			Vector(getBall().getPos() - getBody().getPos()).getDirection(), getBody().getBodyDir());
+	double eff_power = MAX_BACK_TACKLE_POWER
+			+ ((MAX_TACKLE_POWER - MAX_BACK_TACKLE_POWER) * (1.0 - fabs(target_rel_angle) / 180.0));
 	eff_power *= getBall().getTacklePowerRate();
-	eff_power *= 1.0 - 0.5*( fabs(ball_rel_angle) / 180.0 );
+	eff_power *= 1.0 - 0.5 * (fabs(ball_rel_angle) / 180.0);
 	return eff_power;
 }
 

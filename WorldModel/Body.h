@@ -15,7 +15,7 @@
  *
  *  Released on Sunday 4 July 2010, 12 Tir 1389 by Mersad RoboCup Team.
  *  For more information please read README file.
-*/
+ */
 
 #ifndef __BODY_H
 #define __BODY_H
@@ -26,7 +26,6 @@
 #ifndef NULL
 #	define NULL 0
 #endif // NULL
-
 #define UNUM_FAR_LENGTH 20.00
 #define UNUM_TOO_FAR_LENGTH 40.00
 #define TEAM_FAR_LENGTH 40.00
@@ -103,18 +102,21 @@ public:
 	bool isCollisionPlayer() const;
 	bool isCollisionPost() const;
 
-// توضیح دو تابع زیر در کلاس Player آمده است.
+	float getDashDirRate(float dir) const;
+	float getTurnInertia() const;
+
 	void simulateByDynamics(bool realBody = false);
 	void simulateByAction(const Command *bodyCycleCommand, bool realBody = false);
 
 	void completeParseSenseBody();
 	void parseSenseBody(const SExpression &exp, Side OurFieldSide);
-	void update(FieldFlag **flags, FieldGoal **goals, FieldLine **lines,
-			unsigned flagsNum, unsigned goalsNum, unsigned linesNum);
+	void update(FieldFlag **flags, FieldGoal **goals, FieldLine **lines, unsigned flagsNum,
+			unsigned goalsNum, unsigned linesNum);
 
 	virtual void setServerParamVars(const Param &serverParam);
 
 	float viewWidthToViewAngle(ViewModeWidth width) const;
+	ViewModeWidth viewAngleToViewWidth(float angle) const;
 
 	// Counting functions
 	bool isKickCountChanged() const;
@@ -130,6 +132,7 @@ public:
 	bool isFocusCountChanged() const;
 	bool isTackleExpiresChanged() const;
 	bool isTackleCountChanged() const;
+	bool isBallInKickable(const Ball& ball)const;
 
 	// Getting functions
 	float getViewAngle() const;
@@ -159,12 +162,16 @@ public:
 	TeamId getFocusTargetTeamId() const;
 	float getBattery() const;
 
+	float getBallAccelMax(const Ball &ball) const;
+
 // این تابع حالت درجه دید را بر می گرداند. همان طور که می دانید سه حالت برای دید وجود دارد که تفاوت آن ها در میزان درجه ی آن هاست.
 	ViewModeWidth getVMWidth() const;
 
 	ViewModeQuality getVMQuality() const;
 
 	float getVisibleDistance() const;
+
+	bool canLookToDir(float dir, ViewModeWidth vmw) const;
 
 	// Setting functions
 	void setViewAngle(float viewAngleArg);
@@ -174,6 +181,7 @@ public:
 	void setVMQuality(ViewModeQuality vmQualityArg);
 
 	void setEffort(float effortArg);
+
 };
 
 #endif // __BODY_H

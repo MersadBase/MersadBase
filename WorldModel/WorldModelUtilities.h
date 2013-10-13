@@ -22,6 +22,8 @@
 
 #include <WorldModelBase.h>
 #include <Formation.h>
+#include <TriFormation.h>
+#include <StaticFormation.h>
 
 // در این فایل توابع ابزاری(Utilities) کلاس WorldModel قرار دارند.
 
@@ -29,6 +31,8 @@ class WorldModelUtilities: public WorldModelBase
 {
 protected:
 	static Formation formation, beforeKickOffFormation, nonPlayOnFormation;
+	static TriFormation playOnFormation,kickInFormation;
+	static StaticFormation staticFormation;
 	static bool formationSet;
 
 public:
@@ -48,8 +52,9 @@ public:
 
 	float getTackleEffectivePower(float Direction) const;
 
-// مشخص می کند که آیا توپ قابل ضربه زدن هست یا نه. یعنی توپ در محوطه ی kickable بازیکن ما قرار دارد یا نه.
-	bool isBallKickable() const;
+	float getKickableArea() const;
+
+	bool isBallKickable(float extraKickable=0) const;
 
 // همان تابع بالا است با این تفاوت که می توانیم توپ را خودمان مشخص کنیم.
 	bool isBallKickable(const Ball &theBall) const;
@@ -91,8 +96,11 @@ public:
 
 // نمونه ای از جنس Formation برای ما بر می گرداند که اطلاعات مربوط به جایگیری بازیکن ها را از فایل NonPlayOnPositioning.conf خوانده و در اختیار ما می گذارد.
 	const Formation& getBeforeKickOffFormation() const;
-
 	const Formation& getNonPlayOnFormation() const;
+	const TriFormation& getPlayOnFormation() const;
+	const TriFormation& getKickInFormation() const;
+	const StaticFormation& getStaticFormation() const;
+
 
 // این تابع خط آفساید بازیکنان حریف را بر می گرداند. این تابع یک ورودی اختیاری از جنس bool دارد که اگر true باشد به این معنی است که در محاسبه ی خط آفساید توپ را در نظر بگیرد و اگر false باشد یعنی فقط بازیکنان حریف را در نظر بگیرد.
 	float getOppOffsideLine(bool isBallFlag = true) const;
@@ -136,12 +144,23 @@ public:
 // دروازه بان تیم حریف را می دهد. باید بررسی شود که NULL نباشد. اگر دروازه بان را نبیند NULL خروجی می دهد.
 	const Player *getOppGoalie() const;
 
+	unsigned getOppCountInDistanceFromPoint(Point p,float distance)const;
+
+	unsigned getUniNum() const;//just for convenience
+	const Vector& getBallPos() const;//just for convenience
+
+
+
 	float getSecurityStatus(const Player &player, float oval_a = .4, float oval_b = .5) const;
 	float getPathSecurityStatus(const Player &srcPlayer, const Point trgPoint, float forwardRate) const;
 
 	bool isOppBallShooted(const Ball &theBall) const;
 	bool isOppBallShootedToTir(const Ball &theBall, float upYTirPoint,
 								float downYTirPoint, Point &shootIntercept) const;
+
+	bool isPointInField(Point p,float margin = 0)const;
+	bool isPointInOurDangerArea(Point p)const;
+	bool isPointInOppDangerArea(Point p,float margin = 0)const;
 };
 
 #endif // __WORLD_MODEL_UTILITIES_H

@@ -27,6 +27,7 @@
 
 #include <Vector.h>
 #include <Command.h>
+#include <SayCodec.h>
 
 class WorldModel;
 
@@ -75,48 +76,21 @@ public:
 };
 
 
-// Say Types
+
+enum SayType
+{
+	ST_PASS,
+	ST_SIZE//always the last one so it represents the SayType size
+};
 
 struct SayDecisionForm
 {
-	bool defenseSay;
-	std::string defenseStr;
-
-	bool dfbSystem;
-	int dfbStatus;
-
-	bool passSay;
-	unsigned passNum;
-
-	bool doRoutinSay;
-	bool beforePassSay;
-
-	bool suggestPassSay;
-	float passDir;
-	float passSpeed;
-	float passWeight;
-	unsigned passPlayerNum;
-
-	unsigned interceptNum;
+	std::vector <SayType> says;
 	unsigned attentionNum;
-
-	bool freeKickSay;
-	int freeKickAdviceNumber;
-
-	unsigned planStatus;
-	unsigned gwInterceptNum;
-	unsigned gwAttentionNum;
-
-	bool planSay;
-	std::string planHeader;
-	std::string planInfo;
-
-	bool radarSay;
-	int radarPlayersNum;
-	int ids[3];
-	Vector radarPlayers[3];
+	SayHearVars vars;
 
 	SayDecisionForm();
+	void addSay(SayType st);
 	void reset();
 };
 
@@ -138,8 +112,12 @@ enum TurnNeckMode {
 	TNM_LOOK_OFFENSIVE = 11,
 	TNM_LOOK_TO_RECEIVER = 12,
 	TNM_SEARCH = 13,
-	TNM_LOOK_TO_DIR = 14,
-	TNM_LOOK_TO_TMM_AND_BALL = 15
+	TNM_LOOK_TO_DIR_NARROW = 14,
+	TNM_LOOK_TO_TMM_AND_BALL = 15,
+	TNM_LOOK_TO_DIR_NORMAL = 16,
+	TNM_LOOK_TO_DIR_WIDE = 17,
+	TNM_LOOK_TO_BALL = 18,
+	TNM_LOOK_TO_POINT_NARROW = 19
 };
 
 struct HeadDecisionForm
@@ -147,6 +125,7 @@ struct HeadDecisionForm
 	TurnNeckMode tnMode;
 	unsigned attentionNum;
 	float direction;
+	Point lookPoint;
 
 	void reset();
 };

@@ -89,6 +89,10 @@ public:
 	void normalize();
 
 	float getDistance(const Vector vec) const;
+
+	float innerProduct(const Vector &vec) const;
+
+	float crossProduct(const Vector& v) const;
 };
 
 Vector operator+(const Vector &Vector1, const Vector &Vector2);

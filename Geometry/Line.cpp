@@ -59,7 +59,6 @@ inline int QUADRATIC_FOMULA( const double & a, const double & b, const double & 
 
 Line::Line(Point point1, Point point2)
 {
-	float n;
 	if (point2.x == point1.x)
 	{
 		b = 0;
@@ -70,7 +69,7 @@ Line::Line(Point point1, Point point2)
 	else
 	{
 		m = (point2.y - point1.y) / (point2.x - point1.x);
-		n = point1.y - (point1.x * m);
+//		n = point1.y - (point1.x * m);
 
 		a = point1.y - point2.y;
 		b = point2.x - point1.x;
@@ -298,7 +297,6 @@ void Line::setBySourceDir(Point point, float dir)
 void Line::setByPoints(Point point1, Point point2)
 {
 //	float cs, sn
-	float n;
 	if (point2.x == point1.x)
 	{
 		b = 0;
@@ -309,7 +307,7 @@ void Line::setByPoints(Point point1, Point point2)
 	else
 	{
 		m = (point2.y - point1.y) / (point2.x - point1.x);
-		n = point1.y - (point1.x * m);
+//		n = point1.y - (point1.x * m);
 
 		a = point1.y - point2.y;
 		b = point2.x - point1.x;

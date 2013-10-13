@@ -28,12 +28,12 @@ class Offense
 {
 private:
 	Command *command;
-	const WorldModel *worldModel;
+	const WorldModel *wm;
 
 protected:
 
 public:
-	Offense(const WorldModel *worldModel);
+	Offense(const WorldModel *wm);
 	~Offense();
 	
 	void positioning();

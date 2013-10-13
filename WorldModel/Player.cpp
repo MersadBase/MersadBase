@@ -15,7 +15,7 @@
  *
  *  Released on Wednesday 25 August 2010, 3 Shahrivar 1389 by Mersad RoboCup Team.
  *  For more information please read README file.
-*/
+ */
 
 #include <cassert>
 #include <cmath>
@@ -33,7 +33,8 @@
 
 using namespace std;
 
-Player::Player(PlayerModel model) : model(model)
+Player::Player(PlayerModel model) :
+		model(model)
 {
 	goalieFlag = false;
 	tacklingFlag = false;
@@ -81,8 +82,8 @@ void Player::kill()
 	setBodyDirCounter(0xFFFF);
 }
 
-void Player::parse(TeamId teamIdArg, unsigned uniNumArg, bool isGoalie,
-		const SExpression &exp, unsigned curTime)
+void Player::parse(TeamId teamIdArg, unsigned uniNumArg, bool isGoalie, const SExpression &exp,
+		unsigned curTime)
 {
 	SExpAtomic *at;
 
@@ -117,7 +118,7 @@ void Player::parse(TeamId teamIdArg, unsigned uniNumArg, bool isGoalie,
 		assert(at);
 		relativeBodyDir = at->asFloat();
 		bodyDirCounter = 0;
-		
+
 		at = dynamic_cast<SExpAtomic *>(exp[6]);
 		assert(at);
 		relativeHeadDir = at->asFloat();
@@ -150,7 +151,8 @@ void Player::parse(TeamId teamIdArg, unsigned uniNumArg, bool isGoalie,
 	relativePointingDir *= -1;
 }
 
-void Player::parseFullState(TeamId teamIdArg, unsigned uniNumArg, bool isGoalieArg, const SExpression &exp, unsigned curTime)
+void Player::parseFullState(TeamId teamIdArg, unsigned uniNumArg, bool isGoalieArg,
+		const SExpression &exp, unsigned curTime)
 {
 	SExpAtomic *at;
 	float x, y;
@@ -161,7 +163,7 @@ void Player::parseFullState(TeamId teamIdArg, unsigned uniNumArg, bool isGoalieA
 
 	teamId = teamIdArg;
 	uniNum = uniNumArg;
-	
+
 	at = dynamic_cast<SExpAtomic *>(exp[1]);
 	assert(at);
 	x = at->asFloat();
@@ -171,31 +173,31 @@ void Player::parseFullState(TeamId teamIdArg, unsigned uniNumArg, bool isGoalieA
 	y = at->asFloat() * (-1);
 
 	position.setAsCartesian(x, y);
-	
+
 	at = dynamic_cast<SExpAtomic *>(exp[3]);
 	assert(at);
 	x = at->asFloat();
-	
+
 	at = dynamic_cast<SExpAtomic *>(exp[4]);
 	assert(at);
 	y = at->asFloat() * (-1);
-	
+
 	velocity.setAsCartesian(x, y);
-	
+
 	at = dynamic_cast<SExpAtomic *>(exp[5]);
 	assert(at);
 	bodyDir = at->asFloat() * (-1);
 	bodyDirCounter = 0;
-	
+
 	at = dynamic_cast<SExpAtomic *>(exp[6]);
 	assert(at);
 	headDir = at->asFloat() * (-1);
-		
+
 	tacklingFlag = false;
 	kickingFlag = false;
 	foulChargedFlag = false;
 	pointingDir = 0;
-	
+
 	if (exp.size() >= 8)
 	{
 		at = dynamic_cast<SExpAtomic *>(exp[7]);
@@ -269,7 +271,7 @@ void Player::parseFullState(TeamId teamIdArg, unsigned uniNumArg, bool isGoalieA
 	goalieFlag = isGoalieArg;
 	posDeviation = 0;
 	model = PLM_FULL;
-	
+
 	seeTime = curTime;
 }
 
@@ -305,8 +307,7 @@ void Player::setServerParamVars(const Param &serverParam)
 
 void Player::update(const Body &body, PlayMode playMode)
 {
-	position = possiblePoints.calculatePlayerPosition(*this, body,
-			posDeviation, quantizeStep);
+	position = possiblePoints.calculatePlayerPosition(*this, body, posDeviation, quantizeStep);
 	seePosDeviation = posDeviation;
 
 	absVector.setByPoints(body.getPos(), position);
@@ -334,8 +335,7 @@ void Player::update(const Body &body, PlayMode playMode)
 	}
 
 	if (relativePointingDir != NOVALUE)
-		pointingDir = Degree::normalizeAngle(
-				body.getHeadDir() + relativePointingDir);
+		pointingDir = Degree::normalizeAngle(body.getHeadDir() + relativePointingDir);
 	else
 		pointingDir = NOVALUE;
 
@@ -346,8 +346,8 @@ void Player::update(const Body &body, PlayMode playMode)
 		maxSenseStamina = 7000;
 
 	if (pointingDir != NOVALUE and teamId == TID_TEAMMATE)
-		stamina = Basics::reRate(Degree::absoluteAngle(pointingDir),
-				0, 270, 2400, maxSenseStamina, RRM_DIRECT);
+		stamina = Basics::reRate(Degree::absoluteAngle(pointingDir), 0, 270, 2400, maxSenseStamina,
+				RRM_DIRECT);
 	else
 		stamina = staminaMax;
 
@@ -357,8 +357,7 @@ void Player::update(const Body &body, PlayMode playMode)
 
 	if (seeTime == velSeeTime && velocity.getMagnitude() > 0.2)
 	{
-		LOG << "APMR: started for player " << teamId << " " << uniNum
-			<< "." << endl;
+		LOG << "APMR: started for player " << teamId << " " << uniNum << "." << endl;
 		dashExpires = 2;
 	}
 
@@ -371,25 +370,25 @@ void Player::simulateByDynamics(const Body &body)
 	simCounter++;
 	bodyDirCounter++;
 
-/*	if (dashExpires > 0 && bodyDir != NOVALUE)
-	{
-		LOG << "APMR: accelerated for player " << teamId << " " << uniNum
-			<< "." << endl;
+	/*	if (dashExpires > 0 && bodyDir != NOVALUE)
+	 {
+	 LOG << "APMR: accelerated for player " << teamId << " " << uniNum
+	 << "." << endl;
 
-		Vector accel;
-		accel.setAsPolar(0.6, bodyDir);
+	 Vector accel;
+	 accel.setAsPolar(0.6, bodyDir);
 
-		velocity += accel;
-		if (velocity.getMagnitude() > getSpeedMax())
-			velocity.setAsPolar(getSpeedMax(), velocity.getDirection());
-	}
-*/
+	 velocity += accel;
+	 if (velocity.getMagnitude() > getSpeedMax())
+	 velocity.setAsPolar(getSpeedMax(), velocity.getDirection());
+	 }
+	 */
 	position += velocity;
 	velocity *= decay;
 
 	float posDevInc = 0.8 + (simCounter - 1) * 0.2;
 //	if (posDevInc > 1.0)
-		posDevInc = 1.0;
+	posDevInc = 1.0;
 
 	posDeviation += posDevInc;
 	if (posDeviation > MAX_POS_DEV)
@@ -425,11 +424,9 @@ void Player::simulateByAction(const Command *bodyCycleCommand, bool realBody)
 	if (dynamic_cast<const DashCommand *>(bodyCycleCommand))
 	{
 		Vector dashAcclerate;
-		const DashCommand *dashCommand =
-				dynamic_cast<const DashCommand *>(bodyCycleCommand);
+		const DashCommand *dashCommand = dynamic_cast<const DashCommand *>(bodyCycleCommand);
 
-		dashAcclerate.setAsPolar(dashCommand->getPower() *
-				dashPowerRate * 1/* effort */, bodyDir);
+		dashAcclerate.setAsPolar(dashCommand->getPower() * dashPowerRate * 1/* effort */, bodyDir);
 		if (dashAcclerate.getMagnitude() > accelMax)
 			dashAcclerate.setAsPolar(accelMax, dashAcclerate.getDirection());
 
@@ -438,7 +435,7 @@ void Player::simulateByAction(const Command *bodyCycleCommand, bool realBody)
 			velocity.setAsPolar(speedMax, velocity.getDirection());
 
 		/*LOG << "YYY Player Type = " << getType() << " speedMax = " << speedMax << " velocity = " << velocity.getMagnitude()
-		<< " dashAccel = " << dashAcclerate.getMagnitude() << " Power = " << dashCommand->getPower() << " Rate = " << dashPowerRate << endl;*/
+		 << " dashAccel = " << dashAcclerate.getMagnitude() << " Power = " << dashCommand->getPower() << " Rate = " << dashPowerRate << endl;*/
 
 		if (!realBody)
 		{
@@ -536,8 +533,7 @@ bool Player::isAlive() const
 	if (model != PLM_FULL)
 		return isValid();
 
-	if (simCounter < PLAYER_ALIVE_CYCLE or
-			simCounter == 65535)
+	if (simCounter < PLAYER_ALIVE_CYCLE or simCounter == 65535)
 		return true;
 	return false;
 }
@@ -549,12 +545,19 @@ bool Player::isValid() const
 	return false;
 }
 
+bool Player::isValid(unsigned validCycle) const
+{
+	if (simCounter
+			< validCycle/* or (model == PLM_FULL and teamId == TID_OPPONENT and goalieFlag)*/)
+		return true;
+	return false;
+}
+
 void Player::executeAPVR(const Body &body)
 {
 	// Advance Player Velocity Recognizer (APVR)
-	if (model == PLM_FULL && seeDistChange == NOVALUE &&
-		absVector.getMagnitude() < APVR_RADIUS &&
-		!body.isCollisionPlayer() && lastAPVRTime == seeTime - 1)
+	if (model == PLM_FULL && seeDistChange == NOVALUE && absVector.getMagnitude() < APVR_RADIUS
+			&& !body.isCollisionPlayer() && lastAPVRTime == seeTime - 1)
 	{
 		Vector lastBodyVel(body.getVel());
 		lastBodyVel /= body.getDecay();
@@ -565,8 +568,7 @@ void Player::executeAPVR(const Body &body)
 		velocity = virtualVel;
 		velSeeTime = seeTime; // it must be in Parsing but it is an exeption.
 
-		LOG << "APVR: executed for player " << teamId << " "
-			<< uniNum << "." << endl;
+		LOG << "APVR: executed for player " << teamId << " " << uniNum << "." << endl;
 	}
 
 	if (absVector.getMagnitude() < APVR_RADIUS)
@@ -581,8 +583,7 @@ void Player::executeAPVR(const Body &body)
 void Player::executeAPDR(const Body &body)
 {
 	// Advanced Player Direction Recognizer (APDR)
-	if (model == PLM_FULL && velSeeTime == seeTime &&
-		lastAPDRTime == seeTime - 1)
+	if (model == PLM_FULL && velSeeTime == seeTime && lastAPDRTime == seeTime - 1)
 	{
 		Vector Accelerate(velocity);
 		Accelerate /= getDecay();
@@ -592,8 +593,7 @@ void Player::executeAPDR(const Body &body)
 		{
 			bodyDir = Accelerate.getDirection();
 			setBodyDirCounter(0);
-			LOG << "APDR: executed for player " << teamId << " "
-				<< uniNum << "." << endl;
+			LOG << "APDR: executed for player " << teamId << " " << uniNum << "." << endl;
 		}
 	}
 
@@ -620,10 +620,9 @@ bool Player::canBodySee(const Vector &playerPos, float viewAngle, float visibleD
 	if (absVector.getMagnitude() + 0.75 * posDeviation < visibleDist)
 		return true;
 
-	if (abs(headVector.getDirection()) +
-		Degree::arcTan(0.75 * posDeviation / absVector.getMagnitude()) <
-				viewAngle &&
-		absVector.getMagnitude() + 0.75 * posDeviation < farLength)
+	if (abs(headVector.getDirection())
+			+ Degree::arcTan(0.75 * posDeviation / absVector.getMagnitude()) < viewAngle
+			&& absVector.getMagnitude() + 0.75 * posDeviation < farLength)
 		return true;
 
 	return false;
@@ -687,8 +686,7 @@ unsigned Player::postNumToUniNum(unsigned postNum)
 	return postNum;
 }
 
-void Player::updateByHear(float x, float y, float velMag, float velDir,
-		const Body &body)
+void Player::updateByHear(float x, float y, float velMag, float velDir, const Body &body)
 {
 	LOG << "Player::updateByHear" << endl;
 
@@ -710,8 +708,7 @@ void Player::updateByHear(float x, float y, float velMag, float velDir,
 	updatedByHear = true;
 }
 
-void Player::updateByRadar(float magnitude, float direction,
-		const Body &body, const Ball &ball)
+void Player::updateByRadar(float magnitude, float direction, const Body &body, const Ball &ball)
 {
 //	LOG << "Player::updateByRadar" << endl;
 

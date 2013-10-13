@@ -11,27 +11,36 @@
  *  GNU Library General Public License for more details.
  *
  *  This file is created by: Ahmad Boorghany
+ *  	and is modified by: Mohammadreza Montazeri
  *
- *  Released on Sunday 4 July 2010, 12 Tir 1389 by Mersad RoboCup Team.
+ *  Released on Monday 13 September 2010, 22 Shahrivar 1389 by Mersad RoboCup Team.
  *  For more information please read README file.
-*/
-
+ */
 #include <cmath>
 #include <string>
 #include <cassert>
 
 #include <WorldModel.h>
 #include <Logger.h>
+#include <Degree.h>
 #include <Command.h>
 #include <Defines.h>
 #include <SayEncoding.h>
+#include <SayCodec.h>
 #include <SayDecision.h>
+#include <Basics.h>
 
 using namespace std;
+using namespace Degree;
+
+#define LOGS LOG
+
+const unsigned long long MAXBASE = 4923990397355877376ull;
 
 // class SayDecision
 
-SayDecision::SayDecision(const WorldModel *worldModel): worldModel(worldModel)
+SayDecision::SayDecision(const WorldModel *worldModel) :
+		worldModel(worldModel)
 {
 }
 
@@ -39,289 +48,36 @@ SayDecision::~SayDecision()
 {
 }
 
-void SayDecision::decide(const Command *bodyCycleCommand,
-		const SayDecisionForm &sayForm)
+void SayDecision::decide(const Command *bodyCycleCommand, const SayDecisionForm &sayForm)
 {
 	LOG << "SayDecision::decide" << endl;
-
-	unsigned attentionNum;
-
-	if (sayForm.attentionNum)
-		attentionNum = sayForm.attentionNum;
-	else
+	LOG << "MAXBASE IS \t\t" << MAXBASE << endl;
+	curCode = CodeItem();
+	for (vector<SayType>::const_iterator i = sayForm.says.begin(); i != sayForm.says.end(); i++)
 	{
-		float min = 0xFFFF;
-		unsigned miner = NOVALUE;
-
-		for (unsigned i = 0; i < FULL_PLAYERS_NUM; i++)
-			if (worldModel->getFullPlayer(TID_TEAMMATE, i).isValid() &&
-				!worldModel->getFullPlayer(TID_TEAMMATE, i).isBody())
-				if (miner == NOVALUE ||
-					worldModel->getFullPlayer(TID_TEAMMATE, i).getDistance(
-						worldModel->getBall()) < min)
-				{
-					miner = i;
-					min = worldModel->getFullPlayer(TID_TEAMMATE, i).getDistance(
-							worldModel->getBall());
-				}
-
-		if (miner == NOVALUE)
-			attentionNum = 9;
-		else
-			attentionNum = miner + 1;
+		switch (*i)
+		{
+		case ST_PASS:
+			sayPass(bodyCycleCommand, sayForm);
+			break;
+		default:
+			break;
+		}
+		LOG << " Current Base = " << curCode.base << endl;
 	}
 
-	attentionCommand = new AttentionToCommand(TID_TEAMMATE, attentionNum);
-
-	int permitLevel;
-
-	if (sayForm.defenseSay)
-		sayDefense(sayForm);
-	if (sayForm.dfbSystem)
-		sayDFB(sayForm);
-	else if (sayForm.passSay)
+	if (curCode.base > 1)
 	{
-		unsigned playerNum = sayForm.passNum;
-		if (playerNum > 11)
-			playerNum -= 11;
-		sayBeforePass(bodyCycleCommand, sayForm);
-	}
-	else if (sayForm.defenseSay)
-		sayDefense(sayForm);
-	else if (sayForm.radarSay)
-		sayRadar(sayForm);
-	else if (sayForm.freeKickSay)
-		sayFreeKick(sayForm);
-	else if (sayForm.beforePassSay)
-	{
-		unsigned playerNum = sayForm.interceptNum;
-		if (playerNum > 11)
-			playerNum -= 11;
-
-			sayBeforePass(bodyCycleCommand, sayForm);
-	}
-	else if ((permitLevel = getSayRoutinBallPermission(sayForm)))
-	{
-		if (permitLevel == 1)
-			sayRoutinBallWithoutVel(bodyCycleCommand, sayForm);
-		else if (permitLevel == 2)
-			sayRoutinBall(bodyCycleCommand, sayForm);
-		else
-			assert(0);
+		string realMessage;
+		SayCodec::numToStr(curCode.number, realMessage, 10);
+		sayCommand = new SayCommand(realMessage);
 	}
 	else
 		sayCommand = new EmptyCommand();
-}
-
-void SayDecision::sayBeforePass(const Command *bodyCycleCommand, const SayDecisionForm &sayForm)
-{
-	string str = "A"; // BeforePass say flag
-
-	Body nextBody(worldModel->getBody());
-	nextBody.simulateByAction(bodyCycleCommand);
-	nextBody.simulateByDynamics();
-
-	Ball nextBall(worldModel->getBall());
-	nextBall.simulateByAction(worldModel->getBody(), bodyCycleCommand);
-	nextBall.simulateByDynamics(nextBody, 1);
-
-	SayEncoding::encodeObjectPosition(nextBall.getPos().getX(), nextBall.getPos().getY(), str);
-	SayEncoding::encodeObjectVelocity(nextBall.getVel().getMagnitude(), nextBall.getVel().getDirection(), str);
-
-	str += SayEncoding::sayCodeKey[sayForm.passNum];
-
-	sayCommand = new SayCommand(str);
-}
-
-void SayDecision::sayRoutinBall(const Command *bodyCycleCommand, const SayDecisionForm &sayForm)
-{
-	string str = "Z"; // RoutinBall say flag
-
-	int sayingIntNum;
-	if (sayForm.interceptNum)
-		sayingIntNum = sayForm.interceptNum;
+	if (sayForm.attentionNum)
+		attentionCommand = new AttentionToCommand(TID_TEAMMATE, sayForm.attentionNum);
 	else
-		sayingIntNum = sayForm.gwInterceptNum;
-
-	Body nextBody(worldModel->getBody());
-	nextBody.simulateByAction(bodyCycleCommand);
-	Body speedBody(nextBody); // I need this copy.
-	nextBody.simulateByDynamics();
-
-	Ball nextBall(worldModel->getBall());
-	nextBall.simulateByAction(worldModel->getBody(), bodyCycleCommand);
-	nextBall.simulateByDynamics(nextBody, 1);
-
-	SayEncoding::encodeObjectPosition(nextBall.getPos().getX(),
-			nextBall.getPos().getY(), str);
-
-	if (worldModel->isBallKickable() && sayingIntNum != 0 &&
-		worldModel->getBall().getPosDeviation() < 5)
-	{
-		SayEncoding::encodeObjectVelocity(
-				speedBody.getVel().getMagnitude(),
-				speedBody.getVel().getDirection(), str); // When I have the ball, it's velocity has no meaning.
-		str += SayEncoding::sayCodeKey[sayingIntNum +
-				SAY_UPPER_CASE_NUM]; // It means "Khow that I have the ball."
-
-		str += SayEncoding::sayCodeKey[sayForm.planStatus];
-		str += SayEncoding::sayCodeKey[0];
-	}
-	else
-	{
-		// When the ball is in the kickable of somebody, its velocity has no meaning.
-		const Player *player = NULL;
-
-		if (worldModel->isBallInTmmKickable())
-		{
-			player = &worldModel->getNearestTmmToBall();
-			SayEncoding::encodeObjectVelocity(player->getVel().getMagnitude(),
-					player->getVel().getDirection(), str);
-		}
-		else if (worldModel->isBallInOppKickable())
-		{
-			player = worldModel->getNearestOppToBall();
-			SayEncoding::encodeObjectVelocity(player->getVel().getMagnitude(),
-					player->getVel().getDirection(), str);
-		}
-		else
-			SayEncoding::encodeObjectVelocity(nextBall.getVel().getMagnitude(),
-					nextBall.getVel().getDirection(), str);
-
-		str += SayEncoding::sayCodeKey[sayingIntNum];
-		str += SayEncoding::sayCodeKey[sayForm.planStatus];
-
-		if (player == NULL ||
-			player->getModel() != PLM_FULL ||
-			player->getPosDeviation() > 4)
-			str += SayEncoding::sayCodeKey[0];
-		else
-		{
-			if (player->getTeamId() == TID_TEAMMATE)
-				str += SayEncoding::sayCodeKey[player->getUniNum()];
-			else if (player->getTeamId() == TID_OPPONENT)
-				str += SayEncoding::sayCodeKey[player->getUniNum() + 11];
-			else
-			{
-				assert(0);
-				str += SayEncoding::sayCodeKey[0];
-			}
-		}
-	}
-
-	sayCommand = new SayCommand(str);
-}
-
-void SayDecision::sayRoutinBallWithoutVel(const Command *bodyCycleCommand, const SayDecisionForm &sayForm)
-{
-	string str = "Y"; // RoutinBallWithoutVel say flag
-
-	int sayingIntNum;
-	if (sayForm.interceptNum)
-		sayingIntNum = sayForm.interceptNum;
-	else
-		sayingIntNum = sayForm.gwInterceptNum;
-
-	Body nextBody(worldModel->getBody());
-	nextBody.simulateByAction(bodyCycleCommand);
-	nextBody.simulateByDynamics();
-
-	Ball nextBall(worldModel->getBall());
-	nextBall.simulateByAction(worldModel->getBody(), bodyCycleCommand);
-	nextBall.simulateByDynamics(nextBody, 1);
-
-	SayEncoding::encodeObjectPosition(nextBall.getPos().getX(),
-			nextBall.getPos().getY(), str);
-
-	str += SayEncoding::sayCodeKey[sayingIntNum];
-	str += SayEncoding::sayCodeKey[sayForm.planStatus];
-
-	sayCommand = new SayCommand(str);
-}
-
-int SayDecision::getSayRoutinBallPermission(const SayDecisionForm &sayForm)
-{
-	if (worldModel->isBallKickable() &&
-		 worldModel->getBall().getPosDeviation() < 5)
-		return 2;
-
-	if (sayForm.doRoutinSay && worldModel->getBall().getPosDeviation() < 5)
-	{
-		if (worldModel->getBall().getVelSeeTime() == worldModel->getCurTime())
-			return 2;
-		else
-			return 1;
-	}
-
-	if (worldModel->getBall().getSeeTime() == worldModel->getCurTime() &&
-		worldModel->getBall().getVelSeeTime() == worldModel->getCurTime())
-		return 2;
-
-	return 0;
-}
-
-void SayDecision::sayFreeKick(const SayDecisionForm &sayForm)
-{
-	string str = "F"; // freeKick say flag
-
-	str += SayEncoding::sayCodeKey[sayForm.freeKickAdviceNumber];
-
-	sayCommand = new SayCommand(str);
-}
-
-void SayDecision::sayRadar(const SayDecisionForm &sayForm)
-{
-	LOG << "SayDecision::sayRadar" << endl;
-
-	string str = "R"; // Radar say flag
-
-	for (int i = 0; i < sayForm.radarPlayersNum; i++)
-	{
-		LOG << "\tPlayer " << i << " ID: " << sayForm.ids[i]
-			<< " Mag: " << sayForm.radarPlayers[i].getMagnitude()
-			<< " Dir: " << sayForm.radarPlayers[i].getDirection() << endl;
-
-		SayEncoding::encodeRadarObject(sayForm.ids[i],
-			sayForm.radarPlayers[i].getMagnitude(),
-			sayForm.radarPlayers[i].getDirection(),  str);
-	}
-
-	sayCommand = new SayCommand(str);
-}
-
-void SayDecision::sayDefense(const SayDecisionForm &sayForm)
-{
-	LOG << "SayDecision::sayDefense" << endl;
-
-	string str = "D"; // Defense say flag
-
-	str += sayForm.defenseStr;
-
-	sayCommand = new SayCommand(str);
-}
-
-void SayDecision::sayDFB(const SayDecisionForm &sayForm)
-{
-	LOG << "SayDecision::sayDFB" << endl;
-
-	string str = "X"; // DFB say flag
-
-	str += (char(sayForm.dfbStatus) + '0');
-
-	sayCommand = new SayCommand(str);
-}
-
-void SayDecision::sayPass(const SayDecisionForm &sayForm)
-{
-	LOG << "SayDecision::sayPass" << endl;
-
-	string str = "P"; // Pass say flag
-
-	SayEncoding::encodeObjectVelocity(sayForm.passSpeed, sayForm.passDir, str);
-	SayEncoding::encodeWeight(/* Pass Weight */100, -50, 150, str);
-	str += SayEncoding::sayCodeKey[sayForm.passNum];
-
-	sayCommand = new SayCommand(str);
+		attentionCommand = new AttentionOffCommand();
 }
 
 Command *SayDecision::getSayCommand()
@@ -332,4 +88,28 @@ Command *SayDecision::getSayCommand()
 Command *SayDecision::getAttentionCommand()
 {
 	return attentionCommand;
+}
+
+void SayDecision::addSayCode(CodeItem& code)
+{
+	if (MAXBASE / curCode.base <= code.base)
+	{
+		LOG << "Say message is POR!!! you can't add this message!" << endl;
+		return;
+	}
+	code.encode(curCode);
+	LOG << "Code added" << endl;
+}
+
+void SayDecision::sayPass(const Command *bodyCycleCommand, const SayDecisionForm &sayForm)
+{
+	LOGS << "SAY PASS " << endl;
+	CodeItem finalCode;
+	sayForm.vars.passCycle.encode(finalCode);
+	sayForm.vars.passReceiver.encode(finalCode);
+	sayForm.vars.passBallPos.encode(finalCode);
+	sayForm.vars.passDir.encode(finalCode);
+	sayForm.vars.passVel.encode(finalCode);
+	CodeItem(ST_SIZE, ST_PASS).encode(finalCode);
+	addSayCode(finalCode);
 }

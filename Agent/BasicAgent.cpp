@@ -228,6 +228,8 @@ void BasicAgent::init(const SExpression &exp)
 	else
 		logger.add("MainLog", new LogNull());
 
+	logger.add("Fake",new LogNull());//added by makm
+
 	offLogFileName = logFileName + ".off";
 	if (config["Agent"]["AgentLog"]["OffLogToFile"].asBool())
 		logger.add("OfflineLog", new LogFile(

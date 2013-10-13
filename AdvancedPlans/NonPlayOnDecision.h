@@ -15,7 +15,7 @@
  *
  *  Released on Sunday 4 July 2010, 12 Tir 1389 by Mersad RoboCup Team.
  *  For more information please read README file.
-*/
+ */
 
 #ifndef __NON_PLAY_ON_PLAN_H
 #define __NON_PLAY_ON_PLAN_H
@@ -27,7 +27,7 @@ class NonPlayOnDecision
 {
 private:
 	Command *command;
-	const WorldModel *worldModel;
+	const WorldModel *wm;
 
 protected:
 	bool areAllPlayersReady();
@@ -36,10 +36,12 @@ protected:
 	Vector positions[11];
 
 public:
-	NonPlayOnDecision(const WorldModel *worldModel);
+	NonPlayOnDecision(const WorldModel *wm);
 	~NonPlayOnDecision();
 
 	void decide(Form &form);
+	void usualKick(Form &form, int forceKicker = -1);
+	void usualPos(Form &form);
 	Command *getCommand();
 };
 

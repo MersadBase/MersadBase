@@ -1,3 +1,32 @@
+Sun 13 Oct 2013 10:05:05 AM IRST by Amin
+now we are using git to track changes and add change log
+
+Sat 05 Oct 2013 10:35:03 AM IRST by Amin
+1-say system was rolled back to the older version. the newer system was more like agent2d say system which didn't use the 10 characters optimized.
+2-added space character to valid chars in say system which was forgotten 73 -> 74
+3-say system changed fundamentally now we have CodeItem, CodeItemInt,CodeItemFloat,CodeItemPoint which we can use to code and decode params.a new structure named SayHearVars is used to initialize the variables we want to say and their value ranges and precision.this helps us to code less in coding & decoding and mathematical procedures are done automatically.(man avalesh mikhastam too worldModelHear dige moteghayer tarif nakonam va daghighan har chi invar code shod oonvar decode beshe va faghat az hamoon SayHearVars estefade beshe ke ta ye haddi ham shodani bood vali dar kol az lahaz sakhtari dorost nabood va jaleb nemishod age ye moteghayeri faghat gharar bood mohasebe beshe va oon var say nemishod vase hamin dobare oon moteghayer haye sabeghe heardX ro tarif kardam :( dar kol bad nashod vali mitoonest behtar beshe)
+
+Tue 01 Oct 2013 07:07:53 PM IRST by Amin
+1-updated FastIc with an old one I had new features : see if the team is scored a goal with goalFlag.you can get player distances to the ball in a specific cycle using fixCycle( the default cycle is the firstReachCycle) . lots of new parameters for setByWorldModel function.more functions for logging the players and for debug purposes and etc.
+
+
+Mon 23 Sep 2013 10:40:07 AM IRST by Amin
+1-added some new tnModes to headdecision
+2-fixed bug in SyncedAgent which returned VMW_NARROW instead of VMW_WIDE in function getSyncedWide()
+3-added canLookToDir function to body
+4-added staticFormation
+
+
+Wed 18 Sep 2013 11:04:44 AM IRDT by Amin
+1-added innerProduct and Crossproduct for Vector Class  and imported Segment and Triangle class (needed for Delaunay Triangulation)
+2-added fake log for convinience
+3-added isOut functino to ball Class and extra "margin" paramter for isBallKickable function
+4-added some isPointInSomewhere functions to worldmodel Utilities
+5-added new MultiStepKick
+6-added ChainAction
+Sun 22 Sep 2013 09:46:21 AM IRST by Amin
+7-added new Intercept
+
 
 [1.1.2]
 Mon 13 Sep 2010 Mehrdad Bakhtiari <mehrdad@bakhtiari.org>

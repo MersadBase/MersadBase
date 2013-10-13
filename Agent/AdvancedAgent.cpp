@@ -100,22 +100,6 @@ void AdvancedAgent::hear(const SExpression &exp)
 	}
 	else
 		worldModel->updateFastIC();
-
-
-	if ((worldModel->getHearedHeader() == 'A' ||
-		 worldModel->getHearedHeader() == 'B') &&
-		worldModel->getHearedSender() == 1 &&
-		worldModel->getHearedInterceptNum() != 1 &&
-	    worldModel->getPlayMode() == PM_GOAL_KICK)
-	{
-		if (worldModel->getPlayModeRemainCycle() < 199)
-		{
-			LOG << "GOAL_KICK --> GOAL_KICK_TAKEN" << endl;
-			worldModel->setVirtualPlayMode(VPM_GOAL_KICK_TAKEN);
-		}
-		else
-			LOG << "GOAL_KICK --> NO CHANGE TO PLAY MODE" << endl;
-	}
 }
 
 bool AdvancedAgent::bodyDecide(int decideLevel)

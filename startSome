@@ -1,0 +1,15 @@
+#! /bin/bash
+
+./header
+
+./MersadAgent $@ --goalie &
+sleep 1
+
+./MersadAgent --number 2 $@ &
+sleep 0.3
+
+./MersadAgent --number 3 $@ &
+sleep 0.3
+
+./MersadAgent $@ --coach &
+sleep 1

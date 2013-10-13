@@ -38,12 +38,9 @@ public:
 	Rectangle();
 // در حالت دوم می توان دو نقطه به عنوان دو سر مستطیل را مشخص کرد.
 	Rectangle(Point a, Point b);
-	Rectangle(double x1, double y1, double x2, double y2);
-
-	Rectangle assignFromCenter(Point c, double len, double wid);
-
 // حالت سوم هم مانند حالت دوم است با این تفاوت که دو نقطه به کمک ۴ عدد مشخص کرده نه دو Point.
-	Rectangle(float x1, float y1, float x2, float y2);
+	Rectangle(double x1, double y1, double x2, double y2);
+	Rectangle assignFromCenter(Point c, double len, double wid);
 	Rectangle& operator+=(Rectangle rect);
 	Rectangle& operator-=(Rectangle rect);
 

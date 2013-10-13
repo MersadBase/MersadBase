@@ -10,11 +10,11 @@
  *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
  *  GNU Library General Public License for more details.
  *
- *  This file is created by: Pooria Kaviani
+ *  This file is created by: Mohammad Amin Khashkhashi Moghaddam
  *
  *  Released on Sunday 4 July 2010, 12 Tir 1389 by Mersad RoboCup Team.
  *  For more information please read README file.
-*/
+ */
 
 #ifndef __INTERCEPT_H
 #define __INTERCEPT_H
@@ -27,56 +27,53 @@ class Form;
 class WorldModel;
 class Command;
 
-// همان طور که می دانید سریع ترین حالتی که توپ را بگیریم این نیست که مستقیم به سمت توپ حرکت کنیم. سریع ترین حالت این است که توپ را در مسیرش قطع کنیم. برای این کار می توانیم از کلاس Intercept استفاده کنیم. برای استفاده از این کلاس باید یک نمونه از آن کلاس را بسازیم. سپس تابع getValue را صدا بزنیم. این تابع محاسبات مربوط به Intercept را انجام می دهد. در ادامه تابع execute را صدا بزنیم که این تابع Intercept را اجرا می کند. فرق این تابع با تابع getValue این است که این تابع تنظیمات مربوط به سر را انجام می دهد و در getValue این محاسبات را انجام نمی دهد. ممکن است ما زمانی فقط بخواهیم از محاسبات Intercept ‌استفاده کنیم و خود Intercept اجرا نشود که در آن زمان فقط تابع getValue را صدا می کنیم. در زیر نمونه ای از کدی که در آن از Intercept استفاده شده آمده است.
-/*
-	Intercept intercept(worldModel);
-	intercept.getValue();
-	intercept.execute(form);
-	command = intercept.getCommand();
-*/
+enum InterceptType {
+	WAIT_INTERCEPT, //vay mistam ta toop biad :D
+	FORWARD_DASH_INTERCEPT,
+	BACK_DASH_INTERCEPT,
+	TURN_INTERCEPT,
+	SIDE_DASH_INTERCEPT, //using side dashes ( 6 angles)
+	STOP_TURN_INTERCEPT,
+	ADJUSTED_DASH_INTERCEPT
+};
 
-class Intercept
-{
+std::ostream &operator<<(std::ostream &stream, const InterceptType &entry);
+
+struct InterceptEntry {
+	unsigned reachCycle;
+	float inKickable; // kickableArea - dist2ball
+//	float threshold;
+//	Point reachPos;
+//	unsigned stamina;
+	Command* command;
+	InterceptType type;
+//	int type;
+	bool operator<(const InterceptEntry& e) const //use stamina for evaluating
+			{
+		if (reachCycle != e.reachCycle)
+			return (reachCycle < e.reachCycle);
+		if (fabs(inKickable - e.inKickable) > 0.1)
+			return (inKickable > e.inKickable);
+		return (type < e.type);
+	}
+};
+
+class Intercept {
 protected:
 	const WorldModel *wm;
 	Command *command;
-	Ball virBall;
-	Ball firstBall;
 	Body firstBody;
-	float getKickableDist();
-	bool stopICStart;
-	unsigned interceptTime;
-	unsigned maxWithTurn;
-	unsigned maxMinus;
-	unsigned maxPlus;
+	Ball firstBall;
 	Point interceptPoint;
+	unsigned interceptTime;
 
 public:
 	Intercept(const WorldModel *wm);
-	bool goalieMode;
-	float goalieKickable;
-	unsigned goalieMinusTime;
 	void execute(Form &form);
-	float getValue();
-
-// دو تابع زیر مشخص می کنند که محاسبات Intercept برای چه توپ چه Body ای انجام شود.
-	void setBall(const Ball *ball);
-	void setBody(const Body *body);
-
-	bool defenseBlock;
-	float defenseKickable;
-
-	bool SRP, shoot;
-	void setMaxPlus(unsigned a);
-	void setMaxMinus(unsigned a);
-	void setMaxWithTurn(unsigned a);
-	unsigned getMaxPlus();
-	unsigned getMaxMinus();
-	unsigned getMaxWithTurn();
-	Point getInterceptPoint();
-	unsigned getInterceptTime();
-
-// تابع زیر command به دست آمده پس از محاسبات Intercept را بر می گرداند.
+	void calculate();
+	void getValue();
+	Point getInterceptPoint() const;
+	unsigned getInterceptTime() const;
 	Command *getCommand();
 };
 

@@ -23,6 +23,7 @@
 #include <Ball.h>
 #include <Body.h>
 #include <Config.h>
+#include <Rectangle.h>
 #include <Logger.h>
 #include <Command.h>
 #include <Defines.h>
@@ -78,7 +79,7 @@ void Ball::setServerParamVars(const Param &serverParam)
 void Ball::update(const Body &body, bool canAVBR, unsigned curCycle)
 {
 	// Added By Pooria
-	Vector lastPosition = position;
+//	Vector lastPosition = position;
 
 	setCollision(false);
 
@@ -475,6 +476,12 @@ bool Ball::isUpdatedByHear() const
 	return updatedByHearFlag;
 }
 
+bool Ball::isOut(float margin) const
+{
+	return !Rectangle(-52.5 - margin, -34 - margin, 52.5 + margin, 34 + margin).isInRectangle(
+			getPos());
+}
+
 Vector Ball::getSeenPos() const
 {
 	return seenPos;
@@ -515,3 +522,11 @@ float Ball::getTacklePowerRate() const
 	return tacklePowerRate;
 }
 
+float Ball::getEffectiveKickPower(const Body &body) const
+{
+	return (1
+			- 0.25
+					* ((bodyVector.getMagnitude() - body.getSize() - size)
+							/ body.getKickableMargin())
+			- 0.25 * (abs(bodyVector.getDirection()) / 180));
+}

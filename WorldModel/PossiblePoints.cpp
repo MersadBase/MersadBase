@@ -562,8 +562,8 @@ void PossiblePoints::setBySee(float distance, float direction, float headAngle, 
 
 	initTableByNorthEast(a, b, c - a, d - b);
 
-	int n;
-	n = addSee(distance, direction, headAngle, agentPosition, quantizeStep);
+//	int n;
+//	n = addSee(distance, direction, headAngle, agentPosition, quantizeStep);
 }
 
 

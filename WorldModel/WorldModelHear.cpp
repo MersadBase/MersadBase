@@ -33,9 +33,10 @@ using namespace std;
 using namespace Basics;
 using namespace Degree;
 
+#define LOGH LOG
+
 WorldModelHear::WorldModelHear()
 {
-	freeKickAdvicerSayCycle = 0;
 	lastHearCycle = 0;
 }
 
@@ -43,9 +44,6 @@ void WorldModelHear::updateAfterSenseBody()
 {
 	if (getCurCycle() > lastHearCycle)
 	{
-		hearedPlanStatus = 0;
-		hearedInterceptNum = 0;
-		hearedSuggestPassTime = 0;
 	}
 }
 
@@ -56,8 +54,6 @@ void WorldModelHear::parseHear(const SExpression &exp)
 	unsigned senderNum;
 	SExpAtomic *at;
 	SExpression *exp2;
-
-	resetHearedVarsBeforeHear();
 
 	at = dynamic_cast<SExpAtomic *>(exp[1]);
 	assert(at);
@@ -644,226 +640,41 @@ void WorldModelHear::parseRefereeHear(const SExpression &exp)
 
 void WorldModelHear::selfHear(const std::string &message)
 {
-	if ((message[1] == 'A' || message[1] == 'B') &&
-		curTime != refereeHearTime + 1)
-	{
-		hearedHeader = message[1];
-		hearedSender = body->getUniNum();
-		hearedInterceptNum = SayEncoding::getCharNum(message[8]);
-	}
 }
 
 void WorldModelHear::teammateHear(float hearDir, unsigned senderNum, const string &message)
 {
 	lastHearCycle = getCurCycle();
-	hearedHeader = message[1];
+	hearedSender = senderNum;
+	string puremsg = message;
+	puremsg.erase(0, 1);
+	puremsg.erase(puremsg.size() - 1, 1); // removing " characters
 
-	goalPlanHeard = false;
+	unsigned long long code = SayCodec::strToNum(puremsg);
 
-	switch (message[1])
+	LOGH << "Message = " << puremsg << " Code = " << code << endl;
+	CodeItem flag(ST_SIZE);
+	while (code > 0)
 	{
-	case 'A':
-		beforePassTmmHear(message, senderNum);
-		break;
 
-	case 'P':
-		suggestPassTmmHear(message, senderNum);
-		break;
+		flag.decode(code);
+		LOGH << "heard --> flag = " << flag << endl;
 
-/*	case 'B':
-		beforePassRelatedTmmHear(message, senderNum);
-		break;
-
-	case 'C':
-		suggestPassTmmHear(message, senderNum);
-		break;
-*/
-	case 'Z':
-			if (curTime != refereeHearTime + 1)
-				routinTmmHear(message, senderNum);
+		switch (flag)
+		{
+		case ST_PASS:
+			hearPass(code);
 			break;
-
-	case 'Y':
-			if (curTime != refereeHearTime + 1)
-				routinTmmHearWithoutVel(message, senderNum);
-			break;
-
-	case 'F':
-			if (curTime != refereeHearTime + 1)
-				freeKickKickerHear(message, senderNum);
-			break;
-
-	case 'R':
-		if (curTime != refereeHearTime + 1)
-			radarHear(message, senderNum);
-		break;
-
-	case 'G':
-			if (curTime != refereeHearTime + 1)
-				goalPlanHear(message, senderNum);
-			break;
-
-	default:
-			assert(0);
+		default:
+			LOGH << "Invalid message????" << endl;
+			return;
+		};
 	}
-
 	logObjects();
 }
 
 void WorldModelHear::opponentHear(float hearDir, const string &message)
 {
-}
-
-void WorldModelHear::routinTmmHear(const std::string &message,
-		unsigned senderNum)
-{
-	float x, y, velMag, velDir;
-
-	if (SayEncoding::getCharNum(message[8]) >= SAY_UPPER_CASE_NUM &&
-		(!isBallKickable() || ball->getSeePosDeviation() > 10)) // It means sender now has the ball.
-	{
-		// Updating the ball
-		SayEncoding::decodeObjectPosition(message, 2, x, y);
-		SayEncoding::decodeObjectVelocity(message, 5, velMag, velDir);
-
-		ball->updateByHear(x, y, velMag, velDir, *body);
-
-		// Updating the sender
-		fullPlayers[TID_TEAMMATE][senderNum - 1]->updateByHear(x, y, velMag, velDir, *body);
-	}
-
-	else if (((ball->getSeePosDeviation() > 2 && !isBallKickable()) ||
-			ball->getSeePosDeviation() > 10) &&
-			ball->isUpdateByHearPermitted())
-	{
-		// Updating the ball
-		SayEncoding::decodeObjectPosition(message, 2, x, y);
-		SayEncoding::decodeObjectVelocity(message, 5, velMag, velDir);
-
-		ball->updateByHear(x, y, velMag, velDir, *body);
-
-		// Updating owner
-		int owner = SayEncoding::getCharNum(message[10]);
-		if (owner != 0)
-		{
-			if (owner <= 11)
-				fullPlayers[TID_TEAMMATE][owner - 1]->
-					updateByHear(x, y, velMag, velDir, *body);
-			else
-				fullPlayers[TID_OPPONENT][owner -11 - 1]->
-					updateByHear(x, y, velMag, velDir, *body);
-		}
-	}
-
-	if (SayEncoding::getCharNum(message[8]) >= SAY_UPPER_CASE_NUM)
-		hearedInterceptNum = SayEncoding::getCharNum(message[8]) -
-				SAY_UPPER_CASE_NUM;
-	else
-		hearedInterceptNum = SayEncoding::getCharNum(message[8]);
-
-	hearedSender = senderNum;
-	planStatusSender = hearedSender;
-	hearedPlanStatus = SayEncoding::getCharNum(message[9]);
-}
-
-void WorldModelHear::routinTmmHearWithoutVel(const std::string &message,
-		unsigned senderNum)
-{
-	float x, y;
-
-	if (SayEncoding::getCharNum(message[5]) >= SAY_UPPER_CASE_NUM &&
-		(!isBallKickable() || ball->getSeePosDeviation() > 10)) // It means sender now has the ball.
-	{
-		// Updating the ball
-		SayEncoding::decodeObjectPosition(message, 2, x, y);
-
-		ball->updateByHear(x, y,
-			fullPlayers[TID_TEAMMATE][senderNum - 1]->getVel().getMagnitude(),
-			fullPlayers[TID_TEAMMATE][senderNum - 1]->getVel().getDirection(), *body);
-
-		// Updating the sender
-		fullPlayers[TID_TEAMMATE][senderNum - 1]->updateByHear(x, y,
-			fullPlayers[TID_TEAMMATE][senderNum - 1]->getVel().getMagnitude(),
-			fullPlayers[TID_TEAMMATE][senderNum - 1]->getVel().getDirection(), *body);
-	}
-
-	else if (((ball->getSeePosDeviation() > 2 && !isBallKickable()) ||
-			  ball->getSeePosDeviation() > 10) &&
-			 ball->isUpdateByHearPermitted())
-	{
-		// Updating the ball
-		SayEncoding::decodeObjectPosition(message, 2, x, y);
-
-		ball->updateByHear(x, y, ball->getVel().getMagnitude(),
-				ball->getVel().getDirection(), *body);
-	}
-
-	if (SayEncoding::getCharNum(message[5]) >= SAY_UPPER_CASE_NUM)
-		hearedInterceptNum = SayEncoding::getCharNum(message[5]) -
-				SAY_UPPER_CASE_NUM;
-	else
-		hearedInterceptNum = SayEncoding::getCharNum(message[5]);
-
-	hearedSender = senderNum;
-	planStatusSender = hearedSender;
-	hearedPlanStatus = SayEncoding::getCharNum(message[6]);
-}
-
-void WorldModelHear::setDefensePlanHear(const std::string &message, unsigned senderNum)
-{
-	defenseHeared = true;
-	defenseHearedTime = 0;
-	defenseMessage = message;
-}
-
-void WorldModelHear::beforePassTmmHear(const std::string &message, unsigned senderNum)
-{
-	float x, y, velMag, velDir;
-
-	SayEncoding::decodeObjectPosition(message, 2, x, y);
-	SayEncoding::decodeObjectVelocity(message, 5, velMag, velDir);
-
-	hearedSender = senderNum;
-	hearedInterceptNum = SayEncoding::getCharNum(message[8]);
-	ball->updateByHear(x, y, velMag, velDir, *body);
-}
-
-/*void WorldModelHear::beforePassRelatedTmmHear(const std::string &message,
-		unsigned senderNum)
-{
-	float x, y, velMag, velDir;
-
-	SayEncoding::decodeObjectPosition(message, 2, x, y);
-	SayEncoding::decodeObjectVelocity(message, 5, velMag, velDir);
-
-	hearedSender = senderNum;
-	hearedInterceptNum = SayEncoding::getCharNum(message[8]);
-
-	unsigned num = hearedInterceptNum;
-	if (num > 11)
-		num -= 11;
-
-	if (fullPlayers[TID_TEAMMATE][num - 1]->isValid())
-		ball->updateByHear(
-			fullPlayers[TID_TEAMMATE][num - 1]->getPos().getX() + x,
-			fullPlayers[TID_TEAMMATE][num - 1]->getPos().getY() + y,
-			velMag, velDir, *body);
-}
-*/
-void WorldModelHear::suggestPassTmmHear(const std::string &message, unsigned senderNum)
-{
-	float magnitude, direction, weight;
-
-	SayEncoding::decodeObjectVelocity(message, 2, magnitude, direction);
-	SayEncoding::decodeWeight(message, 5, weight, -50, 150);
-
-	hearedSender = senderNum;
-	hearedSuggestPassNum = SayEncoding::getCharNum(message[8]);
-	hearedSuggestPassDir = direction;
-	hearedSuggestPassSpeed = magnitude;
-	hearedSuggestPassWeight = weight;
-
-	hearedSuggestPassTime = curTime;
 }
 
 void WorldModelHear::parseTeammateCoachHear(const SExpression &exp)
@@ -911,142 +722,57 @@ void WorldModelHear::parseTeammateCoachHear(const SExpression &exp)
 	}
 }
 
-void WorldModelHear::freeKickKickerHear(const std::string &message, unsigned senderNum)
-{
-	unsigned adviceNumber;
-
-	adviceNumber = SayEncoding::getCharNum(message[2]);
-
-	LOG << "WorldModelHear::freeKickAdvicerHear sender=" << senderNum <<
-		" adviceNumber=" << adviceNumber << endl;
-
-	freeKickAdvicerSayCycle = curTime;
-	freeKickAdvicerSayNumber = adviceNumber;
-}
-
-void WorldModelHear::radarHear(const std::string &message, unsigned senderNum)
-{
-	LOG << "WorldModelHear::radarHear" << endl;
-
-	if (getBall().getPosDeviation() > 3 ||
-		getBall().getAbsVec().getMagnitude() > 7)
-		return;
-
-	unsigned id;
-	float magnitude, direction;
-
-	for (int i = 0; message[3 * i + 2] != '"'; i++)
-	{
-		SayEncoding::decodeRadarObject(message, (unsigned)(3 * i + 2),
-				id, magnitude, direction);
-
-		LOG << "\tPlayer " << i << " ID: " << id
-			<< " Mag: " << magnitude	<< " Dir: " << direction << endl;
-
-		TeamId teamId = (TeamId)(int)(id / 11);
-		int uniNum = (id % 11) + 1;
-
-		setFullPlayer(teamId, uniNum - 1).
-				updateByRadar(magnitude, direction, getBody(), getBall());
-
-		if (i == 0) // updating view parts
-		{
-			for (int j = 0; j < VIEW_PARTS_NUM; j++)
-			{
-				float deltaAngle = abs(getDeltaAngle(
-					getFullPlayer(teamId, uniNum - 1).getAbsVec().getDirection(),
-					getViewPartDir(j)));
-
-				if (deltaAngle <= (VIEW_PART_SIZE / 2) - 2.5)
-				{
-					viewPartCycles[j] = 1;
-					break;
-				}
-			}
-		}
-	}
-
-	hearedSender = senderNum;
-}
-
-void WorldModelHear::goalPlanHear(const std::string &message,
-		unsigned senderNum)
-{
-	LOG << "WorldModelHear::goalPlanHear" << endl;
-
-	goalPlanHeard = true;
-	goalPlanMessage = message;
-}
-
-void WorldModelHear::resetHearedVarsBeforeHear()
-{
-	hearedHeader = '\0';
-	hearedSender = 0;
-}
-
-// Getting functions
-unsigned WorldModelHear::getFreeKickAdvicerSayNumber() const
-{
-	return freeKickAdvicerSayNumber;
-}
-
-unsigned WorldModelHear::getFreeKickAdvicerSayCycle() const
-{
-	return freeKickAdvicerSayCycle;
-}
-
-char WorldModelHear::getHearedHeader() const
-{
-	return hearedHeader;
-}
-
-unsigned WorldModelHear::getHearedSender() const
-{
-	return hearedSender;
-}
-
-unsigned WorldModelHear::getHearedInterceptNum() const
-{
-	return hearedInterceptNum;
-}
-
-unsigned WorldModelHear::getHearedPlanStatus() const
-{
-	return hearedPlanStatus;
-}
-
-int WorldModelHear::getPlanStatusSender() const
-{
-	return planStatusSender;
-}
-
-unsigned WorldModelHear::getHearedSuggestPassNum() const
-{
-	return hearedSuggestPassNum;
-}
-
-unsigned WorldModelHear::getHearedSuggestPassTime() const
-{
-	return hearedSuggestPassTime;
-}
-
-float WorldModelHear::getHearedSuggestPassDir() const
-{
-	return hearedSuggestPassDir;
-}
-
-float WorldModelHear::getHearedSuggestPassSpeed() const
-{
-	return hearedSuggestPassSpeed;
-}
-
-float WorldModelHear::getHearedSuggestPassWeight() const
-{
-	return hearedSuggestPassWeight;
-}
-
 unsigned WorldModelHear::getOurPenaltyKicker() const
 {
 	return ourPenaltyKicker;
 }
 
+
+void WorldModelHear::hearPass(unsigned long long int& code)
+{
+	saidVars.passVel.decode(code);
+	saidVars.passDir.decode(code);
+	saidVars.passBallPos.decode(code);
+	saidVars.passReceiver.decode(code);
+	saidVars.passCycle.decode(code);
+
+	heardPassSender = hearedSender;
+	if (getBody().getUniNum() == heardPassSender)
+		return;
+	lastPassHearCycle = curCycle;
+	LOGH << "Player " << getBody().getUniNum() << " Is Hearing A Pass :" << endl;
+	heardPassCycle = heardPassTime = saidVars.passCycle;
+	heardPassCycle += getCurCycle();
+	heardPassTime += getCurTime();
+	LOGH << "Hearing Pass Cycle : " << heardPassCycle << endl;
+	heardPassReceiver = saidVars.passReceiver;
+	LOGH << "Hearing Pass Receiver : " << heardPassReceiver << endl;
+	Vector heardPassBallPos;
+	float heardPassDir;
+	float heardPassVel;
+	heardPassBallPos = saidVars.passBallPos;
+	LOGH << "Hearing Ball Pos : " << heardPassBallPos << endl;
+	heardPassDir = saidVars.passDir;
+	LOGH << "Hearing Pass Angle : " << heardPassDir << endl;
+	heardPassVel = saidVars.passVel;
+	LOGH << "Hearing Pass Velocity : " << heardPassVel << endl;
+//	LOGH<<"Hearing Completed"<<endl;
+	heardPassBall = getBall();
+	heardPassBall.setPos() = heardPassBallPos;
+	heardPassBall.setVel().setAsPolar(heardPassVel, heardPassDir);
+	int cycle = int(getCurCycle()) - int(heardPassCycle); //may be bigger than getCurCycle() because of Multistepkick
+	LOGH << "HEAR***** sim : " << ball->getSimCounter() << " the other : " << cycle << endl;
+
+	if (cycle == 0) //agar baraye cycle haye ayande bashe to pass positioning set mishe
+	{
+		ball->updateByHear(heardPassBallPos.getX(), heardPassBallPos.getY(), heardPassVel,
+				heardPassDir, getBody());
+//		ball->setPos() = heardPassBallPos;
+//		ball->setVel().setAsPolar(heardPassVel, heardPassDir);
+		for (int i = 0; i < cycle; i++)
+			ball->simulateByDynamics(getBody());
+		ball->setSimCounter(max(0, cycle));
+		LOGH << "Heard A Pass , Setting Ball By Pass : Vel : (" << heardPassVel << ','
+				<< heardPassDir << ") Pos : " << ball->getPos() << endl;
+	}
+}
